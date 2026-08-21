@@ -1,0 +1,56 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Scratch verification screenshots/artifacts (see agent memory) — not shipped.
+# EXCEPTION: the OFFLINE #148 hardening regression proof IS tracked (belongs
+# in history + CI + the dev handoff — it guards a public-facing money-guard).
+# Uses `_verify/*` (not `_verify/`) so git descends into the dir and the
+# negation below can re-include that one file. The real-key proofs
+# (proof-148-realmoney-*, proof-148-stt-arclip) stay ignored — they need a
+# live key + real spend, not CI-safe.
+_verify/*
+!_verify/proof-148-backend-hardening.mjs
+
+# Parallel-agent git worktrees (each is its own linked checkout, on its
+# own branch — not this repo's content; also scanned by oxlint before
+# #147 P2-e added the matching .oxlintrc.json ignorePatterns entry)
+.claude/worktrees/
+
+# On-device Arabic speech-recognition assets (#150) — ~317MB, vendored
+# by `npm run fetch-models` (auto-runs as `prebuild`) from Hugging Face
+# + jsdelivr at build time so the SHIPPED app never depends on either
+# host at runtime. Too large to commit; every dev/CI machine fetches its
+# own copy once (idempotent, see scripts/fetch-models.mjs).
+public/models/
+public/ort/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Secrets — never commit (Nibras keeps all AI/provider keys server-side, never in this client bundle)
+.env
+.env.*
+!.env.example
+
+# Backend spend-cap ledger (#148) — machine-local usage state written by
+# server/index.ts's spend cap, not source. Never committed.
+server/.usage/

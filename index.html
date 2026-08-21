@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Nibras — a calmer way to read, think, and learn." />
+    <title>Nibras — نبراس</title>
+
+    <!-- Fonts: ALL self-hosted via @fontsource/* (see src/index.css's own
+         header comment for the full family list + why) — 2026-08-14,
+         pre-pilot fix batch. This used to <link> the Google Fonts CDN
+         directly; removed so a plain page load makes zero third-party
+         requests, matching what the Privacy page already promised.
+         (Deliberately not naming the removed CDN's own hostname here —
+         a plain string match for it in this file would false-positive
+         an automated "does this still call a third party" scan even
+         though it's just prose in a comment, not a live request.) -->
+
+    <script>
+      // Blocking, pre-React: apply the saved/detected language's dir+lang
+      // to <html> immediately, so a returning Arabic-preferring visitor
+      // never sees a flash of LTR before the app mounts. Mirrors the
+      // exact language-detection logic in src/i18n/index.ts.
+      (function () {
+        try {
+          var saved = localStorage.getItem('nibras-lang');
+          var lang = saved === 'ar' || saved === 'en'
+            ? saved
+            : (navigator.language || '').toLowerCase().startsWith('ar') ? 'ar' : 'en';
+          document.documentElement.lang = lang;
+          document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+        } catch (e) {
+          // localStorage unavailable (e.g. private mode) — default stays en/ltr.
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

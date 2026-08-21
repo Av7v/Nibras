@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  @page { size: A5; margin: 20mm; }
+  body { font-family: sans-serif; font-size: 14pt; line-height: 1.5; }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  h1 { font-size: 18pt; }
+  [dir="rtl"] { font-family: sans-serif; }
+</style>
+</head>
+<body>
+  <div class="page">
+    <h1>Nibras PDF Test Fixture — Page 1</h1>
+    <p>This is a small test PDF created to verify that Nibras can open a PDF file, extract its text client-side using pdf.js, and display it page by page in the reading view.</p>
+    <p>If pagination is working correctly, this page's text should appear as "Page 1" in the Reader, and a Next button should move to the following page.</p>
+  </div>
+  <div class="page">
+    <h1>Page 2 — English content</h1>
+    <p>The second page exists to confirm that multi-page extraction works, not just the first page. Each PDF page should map to exactly one Reader section.</p>
+    <p>A lighthouse keeper checks the lamp every morning before dawn, regardless of the weather, because the one morning she skips is the one morning a ship might need the light most.</p>
+  </div>
+  <div class="page" dir="rtl">
+    <h1>الصفحة الثالثة — محتوى عربي</h1>
+    <p>هذه الصفحة الثالثة من ملف الاختبار، وتحتوي على نص باللغة العربية للتحقق من أن استخراج النص من ملفات PDF يعمل بشكل صحيح مع المحتوى العربي أيضًا، وليس فقط مع الإنجليزية.</p>
+    <p>يجب أن يظهر هذا النص في نبراس بخط عربي واضح، مع الحفاظ على اتصال الحروف دون أي تباعد غير مرغوب فيه بينها.</p>
+  </div>
+</body>
+</html>

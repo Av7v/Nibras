@@ -1,0 +1,47 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "module": "nodenext",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  /* Only the server files actually built/wired to a real runtime:
+   * task #106 (index.ts, voice.ts, its _xaiTts.ts adapter) + task #151
+   * (mindmap.ts, its _xaiChat.ts adapter) + task #148 (the abuse/cost
+   * guards index.ts now imports: _accessControl, _rateLimiter,
+   * _spendCap) — the OTHER server/api/*.ts stubs (explain/summarize/
+   * translate) are a later, separately-scoped slice's responsibility
+   * (see aiService.ts's own build-status comment) and stay untouched,
+   * unchecked scaffold for now, matching server/README.md's original
+   * "reference only" intent for whatever isn't yet actually running. */
+  "include": [
+    "vite.config.ts",
+    "server/index.ts",
+    "server/api/voice.ts",
+    "server/api/_xaiTts.ts",
+    "server/api/mindmap.ts",
+    "server/api/_xaiChat.ts",
+    "server/api/stt.ts",
+    "server/api/_xaiStt.ts",
+    "server/api/summarize.ts",
+    "server/api/explain.ts",
+    "server/api/translate.ts",
+    "server/api/_accessControl.ts",
+    "server/api/_rateLimiter.ts",
+    "server/api/_spendCap.ts"
+  ]
+}
