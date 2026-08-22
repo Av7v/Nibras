@@ -78,15 +78,34 @@ function newGeneratedMapId(): string {
  */
 export function MindMapGenerator({ lang }: { lang: 'en' | 'ar' }) {
   const { t } = useTranslation()
+
+  // #264 (Amal: «نفس فكرة القارئ ... فيه مثال الآن لكن المستخدمين يقدرون
+  // يحطون شي ثاني») — mirror the Reader: the pre-authored example map shows
+  // BY DEFAULT in the big display area on load (no click needed); a reader's
+  // own pasted paragraph REPLACES it in that same area. The example always
+  // works offline/demo; a real generation runs only with an AI backend
+  // configured (handleGenerate), otherwise the honest needs-a-connection state.
+  const exampleState = (l: 'en' | 'ar'): GeneratorState => ({
+    kind: 'result',
+    result: { root: MINDMAP_EXAMPLE_TREE[l], demo: true },
+    isExample: true,
+    // Stable across re-renders AND across languages (readingTechniquesMap.ts's
+    // own convention) so a note/edit on the example survives a language switch.
+    mapId: MINDMAP_GENERATION_EXAMPLE_ID,
+  })
+
   const [sourceText, setSourceText] = useState('')
-  const [state, setState] = useState<GeneratorState>({ kind: 'idle' })
+  const [state, setState] = useState<GeneratorState>(() => exampleState(lang))
   const prevLangRef = useRef(lang)
 
+  // #129/#143 (same as the Reader): on a GENUINE UI-language change reset to
+  // the example in the NEW language — the example follows the UI language, and
+  // a reader's own in-progress result is cleared rather than left stale.
   useEffect(() => {
     if (prevLangRef.current === lang) return
     prevLangRef.current = lang
     setSourceText('')
-    setState({ kind: 'idle' })
+    setState(exampleState(lang))
   }, [lang])
 
   async function handleGenerate() {
@@ -118,26 +137,24 @@ export function MindMapGenerator({ lang }: { lang: 'en' | 'ar' }) {
     }
   }
 
+  // «جرّب المثال» loads the example's own source paragraph too, so a reader
+  // can see (and tweak) the text that produced the default example map.
   function handleTryExample() {
     setSourceText(MINDMAP_EXAMPLE_PARAGRAPH[lang])
-    setState({
-      kind: 'result',
-      result: { root: MINDMAP_EXAMPLE_TREE[lang], demo: true },
-      isExample: true,
-      // Stable across re-renders AND across languages (readingTechniquesMap.ts's
-      // own established convention) — a note/edit made on the example
-      // in one language still applies after a language switch.
-      mapId: MINDMAP_GENERATION_EXAMPLE_ID,
-    })
+    setState(exampleState(lang))
   }
 
+  // "Reset" returns to the DEFAULT example (empty input + example map), not a
+  // blank page — mirrors the Reader returning to its example.
   function handleReset() {
     setSourceText('')
-    setState({ kind: 'idle' })
+    setState(exampleState(lang))
   }
 
   const isGenerating = state.kind === 'generating'
-  const hasContent = sourceText.trim() !== '' || state.kind === 'result'
+  // The reset control shows only once the reader has DEVIATED from the default
+  // example (typed their own text, or generated their own non-example map).
+  const hasContent = sourceText.trim() !== '' || (state.kind === 'result' && !state.isExample)
 
   return (
     <section aria-labelledby="mindmap-generator-heading" className="mb-8">
@@ -162,7 +179,13 @@ export function MindMapGenerator({ lang }: { lang: 'en' | 'ar' }) {
       </div>
       <p className="mb-4 max-w-[46rem] text-[0.9375rem] text-ink-muted">{t('mindMaps.generator.subtitle')}</p>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* #264 (Amal: «ابي الخريطة المولدة تطلع مكان المثال») — STACKED,
+          full-width: the paste-a-paragraph input on top, then the result
+          (or the honest state) FULL-WIDTH below, so the generated / tried
+          map renders BIG in the main display area instead of a cramped
+          half-width side column. This removes the wasted top-left preview
+          rectangle the two-column grid used to leave when idle. */}
+      <div className="flex flex-col gap-4">
         <div className="rounded-card border border-line bg-card p-5">
           <label htmlFor="mindmap-source" className="mb-1 block text-[0.9375rem] font-bold text-ink">
             {t('mindMaps.generator.sourceLabel')}
@@ -312,10 +335,12 @@ export function MindMapGenerator({ lang }: { lang: 'en' | 'ar' }) {
             </div>
           )}
 
+          {/* #264 — a slim one-line hint instead of the old tall dashed
+              placeholder rectangle (the wasted top-left box). When idle the
+              page is just the input + this hint; the big display area only
+              appears once there's a real map to show. */}
           {state.kind === 'idle' && (
-            <div className="flex h-full min-h-[10rem] items-center justify-center rounded-card border border-dashed border-line-strong p-8 text-center">
-              <p className="m-0 text-[0.9375rem] text-ink-muted">{t('mindMaps.generator.emptyHint')}</p>
-            </div>
+            <p className="m-0 text-center text-[0.8125rem] text-ink-muted">{t('mindMaps.generator.emptyHint')}</p>
           )}
         </div>
       </div>

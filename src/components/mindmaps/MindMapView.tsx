@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { MindMapTreeNode } from '../../content/demoMindMaps'
 import { useMindMapNotes } from '../../hooks/useMindMapNotes'
@@ -15,7 +15,9 @@ import { hexToHsl, hslToHex } from '../../lib/color'
 import { focusRing } from '../../lib/focus'
 import { AddIcon, ChevronIcon, DownloadIcon, EditIcon, NoteIcon, PaletteIcon, SpeakerIcon, StopIcon } from '../icons'
 import { SpeakerButton } from '../techniques/SpeakerButton'
-import { ColorWheelField } from '../reader/SettingsFields'
+import { ColorWheelField, TypefaceField, type TypefaceOption } from '../reader/SettingsFields'
+import { FONT_STACKS, LATIN_TYPEFACE_LABEL_KEY, ARABIC_TYPEFACE_LABEL_KEY, type ArabicTypeface, type LatinTypeface } from '../../lib/readingSettings'
+import { useMindMapTypeface, MINDMAP_LATIN_TYPEFACES, MINDMAP_ARABIC_TYPEFACES } from '../../hooks/useMindMapTypeface'
 
 // A sentinel id for useSpeakingController's speakingId, distinct from
 // any real node id (all real ids come from content/demoMindMaps.ts or
@@ -99,17 +101,12 @@ function deriveNodeBorder(fillHex: string): string {
   return hslToHex({ h, s, l: Math.max(5, Math.min(95, l - 20)) })
 }
 
-// Same reasoning, for typography: <text> was inheriting font-family
-// from `body` (index.css's --font-sans/--font-arabic, chosen by
-// html[dir]) — also an external-stylesheet value, so the export fell
-// back to the renderer's own generic default (serif) instead of the
-// app's brand font. Matches index.css's font stacks minus their
-// system-font fallback tail (kept short — this is a small label, not
-// body reading text, so a missing web font just shows the platform
-// sans/serif default rather than needing OpenDyslexic-grade fallback
-// care).
-const FONT_LATIN = "'Lexend', system-ui, sans-serif"
-const FONT_ARABIC = "'Tajawal', system-ui, sans-serif"
+// Typography: an SVG <text> must be given an EXPLICIT font-family — it
+// doesn't inherit body's font for the standalone export (XMLSerializer),
+// so without one the download would fall back to the renderer's serif
+// default. #126/#263: the family is now the reader's CHOSEN typeface for
+// this script (FONT_STACKS[typeface] via useMindMapTypeface), replacing
+// the old fixed Lexend/Tajawal constants — user-selectable + persisted.
 
 // A user-typed node label has no length control the way the
 // hand-authored demo content did — capped so a very long typed label
@@ -238,11 +235,36 @@ export function MindMapView({
   const [draftNote, setDraftNote] = useState('')
   const [draftLabel, setDraftLabel] = useState('')
   const [editMode, setEditMode] = useState(false)
-  // Task #211 — Amal's "colour the boxes" control, mirrors editMode's
-  // own shape exactly (a toggle + a selected-node-gated panel below).
-  const [colorMode, setColorMode] = useState(false)
+  // Task #211 / #263 — the colour control (the #211 wheel) is now a
+  // VISIBLE panel below the map beside the font picker, no longer a
+  // top-row toggle (Amal, 2026-08-22), so there is no colorMode state:
+  // it's always shown (wherever colouring is a feature) and simply
+  // colours whichever idea is selected.
   const { colors, setColor } = useMindMapColors(mapId)
+
+  // #263 — zoom (enlarge/shrink) the diagram. A CSS transform scales the
+  // SVG AND its overlay buttons together (they share one wrapper), so they
+  // stay aligned; the scroll box reserves the scaled footprint so both
+  // axes still scroll. Pure visual scale: RTL orientation, colouring, and
+  // the bidi fix are all untouched.
+  const [scale, setScale] = useState(1)
+  const ZOOM_MIN = 0.3
+  const ZOOM_MAX = 2
+  const clampZoom = (s: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(s * 100) / 100))
+  const zoomIn = () => setScale((s) => clampZoom(s + 0.25))
+  const zoomOut = () => setScale((s) => clampZoom(s - 0.25))
+  const zoomReset = () => setScale(1)
+
+  // #126/#263 — user-selectable node-label typeface, per script, persisted
+  // on-device (independent of the reading typeface). Reuses the Reader's
+  // options + FONT_STACKS so the list/logic isn't reinvented.
+  const { typeface, setTypeface } = useMindMapTypeface(lang)
+  const nodeFontFamily = FONT_STACKS[typeface]
+  const typefaceOptions: TypefaceOption<LatinTypeface | ArabicTypeface>[] = rtl
+    ? MINDMAP_ARABIC_TYPEFACES.map((tf) => ({ value: tf, label: t(ARABIC_TYPEFACE_LABEL_KEY[tf]), fontFamily: FONT_STACKS[tf], sampleText: 'أب' }))
+    : MINDMAP_LATIN_TYPEFACES.map((tf) => ({ value: tf, label: t(LATIN_TYPEFACE_LABEL_KEY[tf]), fontFamily: FONT_STACKS[tf], sampleText: 'Aa' }))
   const svgRef = useRef<SVGSVGElement | null>(null)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
   const labelInputRef = useRef<HTMLInputElement | null>(null)
   const [exporting, setExporting] = useState(false)
   // Lazy initializer — runs once at mount only, from the stable `root`
@@ -258,6 +280,29 @@ export function MindMapView({
   const effectiveRoot = useMemo(() => applyMindMapEdits(root, edits), [root, edits])
   const { nodes, edges, width, height } = layoutMindMap(effectiveRoot, rtl, collapsedIds)
   const charsPerLine = rtl ? 15 : 18
+
+  // #263/#264 — fit-to-view: size the zoom so the map FILLS its scroll box.
+  // #264 (Amal: «تاخذ مساحة أكبر»): the collapsed example was rendering tiny
+  // (about 39% of the box width) because the box used to hug its small
+  // content height, which starved this height ratio. There is deliberately
+  // NO upper clamp of 1 anymore, so a SMALL map scales UP to fill the box
+  // (big, readable nodes) instead of sitting at natural size; a big expanded
+  // map still shrinks to fit. clampZoom's ZOOM_MAX(=2) still bounds it so the
+  // map can never overflow the box width into horizontal scrolling.
+  const fitToView = () => {
+    const box = scrollRef.current
+    if (!box || !width || !height) return
+    const pad = 24
+    setScale(clampZoom(Math.min((box.clientWidth - pad) / width, (box.clientHeight - pad) / height)))
+  }
+  // Auto-fit ONCE when a map opens / switches (mapId) — not on every expand,
+  // so a zoom the reader set by hand isn't clobbered when they open a branch;
+  // a big expanded map is re-fitted on demand via the Fit button.
+  useEffect(() => {
+    const id = requestAnimationFrame(fitToView)
+    return () => cancelAnimationFrame(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapId])
   // Cheap on these tree sizes (a few dozen nodes at most) — no need to
   // gate this behind `colorByBranch` itself, simpler to always compute
   // and just not consult it when the prop is off.
@@ -411,20 +456,18 @@ export function MindMapView({
         </span>
       </div>
 
-      {/* Task #211 (2026-08-19), Amal's control reorg — first pass,
-          pending her confirmation on the screenshot (team-lead): voice
-          at the TOP of the controls (its own row), then a second row
-          grouping Download + Edit + the new Colour toggle together
-          ("beside" each other, a tidy utility row below voice).
-          The LOCAL Voice1/Voice2+speed picker that used to render here
-          (task #127) is REMOVED, not moved — #145's header control
-          already sets this exact global preference app-wide, so a
-          second picker in this card was two UI surfaces for one piece
-          of state; flagged this reasoning to team-lead rather than
-          just relocating the redundant picker to satisfy "voice at the
-          top" literally. "Listen to map" (the one control that's
-          actually specific to THIS card, not a duplicate of anything
-          global) is what now occupies that top position. */}
+      {/* #263 (2026-08-22) — Amal: «حط الأزرة الي فوق الخريطة جنب بعض
+          بحيث تكبر المساحة حقت الصورة». All the map controls now share
+          ONE compact row — Listen · Export · Edit · Colour lead, the
+          zoom cluster trails (ms-auto) — instead of the three stacked
+          rows this used to be, so the diagram itself gets the reclaimed
+          vertical space. flex-wrap keeps it from overflowing on narrow
+          / mobile widths; the ambient page direction flows the row
+          right-to-left in Arabic (same flex pattern as before, just
+          merged). The local #127 voice picker was already removed
+          earlier (#145's header control is the one app-wide voice
+          preference); "Listen to map" is the only voice control that
+          belongs to THIS card, so it leads the row. */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {/* Whole-map listen — a text+icon pill matching Edit/Export's
             own shape (not the round SpeakerButton used per-node below:
@@ -463,13 +506,6 @@ export function MindMapView({
             {t('readingBuddy.demoVoiceBadge')}
           </span>
         )}
-      </div>
-      {errorId !== null && (
-        <p role="alert" className="mb-4 text-[0.8125rem] text-ink-muted">
-          {t('techniques.voiceUnavailable')}
-        </p>
-      )}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={handleExport}
@@ -490,33 +526,69 @@ export function MindMapView({
           <EditIcon className="size-4" />
           {t('mindMaps.editButton')}
         </button>
-        {/* Colour (task #211) — same toggle shape as Edit map right next
-            to it, and the SAME gate as automatic branch colouring
-            (colorByBranch): both are part of one #211/#204 feature set.
-            Originally scoped to the AI generator's output only (team-lead's
-            call — "default to the generator's interactive map... flag if
-            the technique maps should get it too"); on 2026-08-19 Amal
-            asked for the colouring on the Reading Techniques example too,
-            so that call now passes colorByBranch and this button renders
-            there as well. */}
-        {colorByBranch && (
+        {/* Colour moved OUT of this row (Amal, 2026-08-22): it's now a
+            visible panel below the map beside the font picker, not a
+            top-row toggle. So the top row is Listen / Export / Edit +
+            the zoom cluster. */}
+        {/* Zoom cluster — kept together as its own labelled group and
+            pushed to the row's trailing edge (ms-auto, a logical margin
+            so it lands on the correct edge in both LTR and RTL).
+            Listen / Export / Edit / Colour lead the row; the "how to
+            view" (zoom) controls trail it. */}
+        <div className="flex items-center gap-1.5 ms-auto" role="group" aria-label={t('mindMaps.zoomLabel')}>
           <button
             type="button"
-            onClick={() => setColorMode((v) => !v)}
-            aria-pressed={colorMode}
-            className={`inline-flex items-center gap-2 rounded-control border-[1.5px] px-3.5 py-2 text-sm font-semibold transition-colors aria-pressed:border-accent aria-pressed:bg-accent-tint aria-pressed:text-accent ${
-              colorMode ? '' : 'border-line-strong text-ink-muted hover:border-accent hover:text-accent'
-            } ${focusRing}`}
+            onClick={zoomOut}
+            disabled={scale <= ZOOM_MIN}
+            aria-label={t('mindMaps.zoomOut')}
+            className={`inline-flex size-9 items-center justify-center rounded-control border-[1.5px] border-line-strong bg-card text-lg font-bold text-ink hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
           >
-            <PaletteIcon className="size-4" />
-            {t('mindMaps.colorButton')}
+            <span aria-hidden="true">−</span>
           </button>
-        )}
+          <button
+            type="button"
+            onClick={zoomReset}
+            aria-label={t('mindMaps.zoomReset')}
+            className={`inline-flex h-9 min-w-[3.5rem] items-center justify-center rounded-control border-[1.5px] border-line-strong bg-card px-2 text-sm font-semibold text-ink tabular-nums hover:border-accent hover:text-accent ${focusRing}`}
+          >
+            {Math.round(scale * 100)}%
+          </button>
+          <button
+            type="button"
+            onClick={zoomIn}
+            disabled={scale >= ZOOM_MAX}
+            aria-label={t('mindMaps.zoomIn')}
+            className={`inline-flex size-9 items-center justify-center rounded-control border-[1.5px] border-line-strong bg-card text-lg font-bold text-ink hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
+          >
+            <span aria-hidden="true">+</span>
+          </button>
+          <button
+            type="button"
+            onClick={fitToView}
+            aria-label={t('mindMaps.zoomFit')}
+            className={`inline-flex h-9 items-center justify-center rounded-control border-[1.5px] border-line-strong bg-card px-3 text-sm font-semibold text-ink hover:border-accent hover:text-accent ${focusRing}`}
+          >
+            {t('mindMaps.zoomFit')}
+          </button>
+        </div>
       </div>
+      {errorId !== null && (
+        <p role="alert" className="mb-4 text-[0.8125rem] text-ink-muted">
+          {t('techniques.voiceUnavailable')}
+        </p>
+      )}
 
       <div
-        className="relative max-h-[70vh] overflow-auto rounded-control border border-line bg-cream/50"
+        ref={scrollRef}
+        className="relative min-h-[34rem] max-h-[80vh] overflow-auto rounded-control border border-line bg-cream/50"
         dir="ltr"
+        onWheel={(e) => {
+          // ctrl/⌘ + wheel = pinch-zoom (trackpad) or Ctrl+wheel (mouse);
+          // a plain wheel stays a normal scroll.
+          if (!e.ctrlKey) return
+          e.preventDefault()
+          setScale((s) => clampZoom(s - Math.sign(e.deltaY) * 0.1))
+        }}
       >
         {/* dir="ltr" pinned here deliberately: the SVG's own coordinate
             space is not dir-aware (see mindMapLayout.ts) — the mirroring
@@ -543,7 +615,12 @@ export function MindMapView({
             move WITH the SVG. `ml-auto` only shifts when the map is
             NARROWER than the box; a wide/expanded map fills it and still
             scrolls normally (auto margin resolves to 0 when overflowing). */}
-        <div className={`relative ${rtl ? 'ml-auto' : ''}`} style={{ width }}>
+        {/* #263 — sizer reserves the scaled footprint so both scroll axes
+            work at any zoom; the inner wrapper carries the transform and
+            holds BOTH the <svg> and the absolutely-positioned overlay
+            buttons, so they scale together and stay aligned. */}
+        <div className={rtl ? 'ml-auto' : ''} style={{ width: width * scale, height: height * scale }}>
+        <div className="relative" style={{ width, height, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
         <svg ref={svgRef} width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={t('mindMaps.diagramAlt', { title })} className="block">
           <g>
             {edges.map((edge) => {
@@ -616,7 +693,7 @@ export function MindMapView({
                     style={{
                       fontSize: 12.5,
                       fontWeight: isRoot ? 700 : 600,
-                      fontFamily: rtl ? FONT_ARABIC : FONT_LATIN,
+                      fontFamily: nodeFontFamily,
                       direction: rtl ? 'rtl' : 'ltr',
                       unicodeBidi: 'isolate',
                     }}
@@ -688,9 +765,77 @@ export function MindMapView({
             </button>
           ))}
         </div>
+        </div>
       </div>
 
       <div className="mt-4 flex flex-col gap-3">
+        {/* #126/#263 — the two "customization" controls (font + colour)
+            sit together below the map (Amal, 2026-08-22): side by side on
+            wide screens, stacked on narrow. items-start so each box keeps
+            its natural height (the colour wheel is much taller than the
+            font pills). */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+          {/* Node-label typeface picker (per script, persisted), like the
+              Reader's; applies to the SVG <text> node labels above. */}
+          <div className="flex-1 rounded-control border border-line bg-cream/50 p-3.5">
+            <TypefaceField
+              legend={t('settings.typeface')}
+              name={`mindmap-typeface-${mapId}`}
+              value={typeface}
+              onChange={setTypeface}
+              options={typefaceOptions}
+            />
+          </div>
+          {/* Colour control (task #211) — moved here from a top-row toggle
+              (Amal, 2026-08-22): a VISIBLE labelled control beside the font
+              picker, always shown wherever colouring is a feature
+              (colorByBranch). Reuses the #211 wheel as-is (contrast
+              safeguard + lightness slider + hex input intact). It colours
+              the SELECTED idea; with none selected (or the root, which
+              keeps its fixed ACCENT identity) it shows a gentle hint
+              instead of an empty wheel. */}
+          {colorByBranch && (
+            <div className="flex-1 rounded-control border border-line bg-cream/50 p-3.5">
+              <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-ink">
+                <PaletteIcon className="size-4 text-accent" aria-hidden="true" />
+                {t('mindMaps.colorButton')}
+              </div>
+              {selectedNode && selectedNode.depth > 0 ? (
+                <>
+                  <ColorWheelField
+                    idPrefix={`mindmap-color-${mapId}`}
+                    legend={t('mindMaps.colorLegend', { label: selectedNode.label })}
+                    caption={t('mindMaps.colorCaption')}
+                    value={effectiveFill(selectedNode.id, false).fill}
+                    onChange={(hex) => setColor(selectedNode.id, hex)}
+                    backgroundHex={INK}
+                    lightnessLabel={t('settings.textColorLightness')}
+                    hexLabel={t('settings.textColorHexLabel')}
+                    previewLabel={t('settings.textColorPreviewLabel')}
+                    wheelAriaLabel={(hex) => t('mindMaps.colorWheelLabel', { hex })}
+                    formatContrastLabel={(ratio) => t('settings.contrastRatioLabel', { ratio })}
+                    contrastGoodLabel={t('settings.contrastGood')}
+                    contrastWarningLabel={t('settings.contrastWarningLow')}
+                    sampleText={rtl ? 'أب' : 'Aa'}
+                  />
+                  {colors[selectedNode.id] && (
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setColor(selectedNode.id, null)}
+                        className={`inline-flex items-center gap-1.5 rounded-control border-[1.5px] border-line-strong px-3.5 py-1.5 text-[0.8125rem] font-semibold text-ink-muted hover:border-accent hover:text-accent ${focusRing}`}
+                      >
+                        {t('mindMaps.resetColorButton')}
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="m-0 text-[0.8125rem] text-ink-muted">{t('mindMaps.selectNodeToColorHint')}</p>
+              )}
+            </div>
+          )}
+        </div>
         {editMode && selectedNode && (
           <div className="rounded-control border border-line bg-cream/50 p-3.5">
             <label htmlFor="mindmap-label" className="mb-1.5 block text-[0.8125rem] font-semibold text-ink">
@@ -725,50 +870,6 @@ export function MindMapView({
                 {t('mindMaps.saveText')}
               </button>
             </div>
-          </div>
-        )}
-
-        {/* Colour panel (task #211) — same "toggle + selected-node-gated
-            panel" shape as the edit panel just above, independently so
-            both can be open together (they touch different attributes,
-            text vs colour, no conflict). Root is never colourable (it
-            keeps its fixed solid ACCENT identity colour, same rule as
-            #204's branch colouring), so this checks depth explicitly
-            rather than reusing a generic "a node is selected" gate. */}
-        {colorMode && selectedNode && selectedNode.depth > 0 && (
-          <div className="rounded-control border border-line bg-cream/50 p-3.5">
-            <ColorWheelField
-              idPrefix={`mindmap-color-${mapId}`}
-              legend={t('mindMaps.colorLegend', { label: selectedNode.label })}
-              caption={t('mindMaps.colorCaption')}
-              value={effectiveFill(selectedNode.id, false).fill}
-              onChange={(hex) => setColor(selectedNode.id, hex)}
-              backgroundHex={INK}
-              lightnessLabel={t('settings.textColorLightness')}
-              hexLabel={t('settings.textColorHexLabel')}
-              previewLabel={t('settings.textColorPreviewLabel')}
-              wheelAriaLabel={(hex) => t('mindMaps.colorWheelLabel', { hex })}
-              formatContrastLabel={(ratio) => t('settings.contrastRatioLabel', { ratio })}
-              contrastGoodLabel={t('settings.contrastGood')}
-              contrastWarningLabel={t('settings.contrastWarningLow')}
-              sampleText={rtl ? 'أب' : 'Aa'}
-            />
-            {colors[selectedNode.id] && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setColor(selectedNode.id, null)}
-                  className={`inline-flex items-center gap-1.5 rounded-control border-[1.5px] border-line-strong px-3.5 py-1.5 text-[0.8125rem] font-semibold text-ink-muted hover:border-accent hover:text-accent ${focusRing}`}
-                >
-                  {t('mindMaps.resetColorButton')}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-        {colorMode && (!selectedNode || selectedNode.depth === 0) && (
-          <div className="rounded-control border border-line bg-cream/50 p-3.5">
-            <p className="m-0 text-[0.8125rem] text-ink-muted">{t('mindMaps.selectNodeToColorHint')}</p>
           </div>
         )}
 

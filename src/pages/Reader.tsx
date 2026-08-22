@@ -12,9 +12,10 @@ import { ReadingBuddyPlayer } from '../components/reader/ReadingBuddyPlayer'
 import { ReadingRuler } from '../components/reader/ReadingRuler'
 import { SectionNav } from '../components/reader/SectionNav'
 import { FileOpenButton } from '../components/reader/FileOpenButton'
+import { OpenFromLibraryButton } from '../components/reader/OpenFromLibraryButton'
 import { BreathIcon, ChevronIcon, ClipboardIcon, SlidersIcon } from '../components/icons'
 import { focusRing } from '../lib/focus'
-import { getCurrentFraction, hashSections, scrollToFraction, type Position, type SourceType } from '../lib/documents'
+import { getCurrentFraction, hashSections, scrollToFraction, type Position, type ReaderDocument, type SourceType } from '../lib/documents'
 import { chunkPlainText } from '../lib/textChunking'
 import { detectLanguage, tagSectionLanguages } from '../lib/detectLanguage'
 import { isAiBackendConfigured } from '../lib/aiService'
@@ -272,6 +273,13 @@ export function Reader() {
     openDocument(result)
   }
 
+  // #260 — open a book the reader already saved, through the SAME
+  // openDocument path an uploaded file uses (finds the existing doc by
+  // its section hash, so its saved reading position is restored too).
+  function handleOpenFromLibrary(doc: ReaderDocument) {
+    openDocument({ sections: doc.sections, sourceType: doc.sourceType, title: doc.title, lang: doc.lang })
+  }
+
   // Opens a pre-loaded example through the exact same path as a real
   // paste/file — it only becomes a real, counted document once a guest
   // deliberately does this (see content/exampleTexts.ts's file-level
@@ -447,7 +455,10 @@ export function Reader() {
           </div>
         </div>
 
-        <FileOpenButton onParsed={handleFileParsed} uiLanguageFallback={isArabic ? 'ar' : 'en'} />
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <FileOpenButton onParsed={handleFileParsed} uiLanguageFallback={isArabic ? 'ar' : 'en'} className="" />
+          <OpenFromLibraryButton documents={documents} onPick={handleOpenFromLibrary} />
+        </div>
 
         {/* "Try an example" — only while there's nothing open yet, so
             it never competes with a real reading session, and only

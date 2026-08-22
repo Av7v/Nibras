@@ -11,12 +11,17 @@ import { focusRingInset } from '../../lib/focus'
 export function FileOpenButton({
   onParsed,
   uiLanguageFallback,
+  className = 'mb-6',
 }: {
   onParsed: (result: ParsedFile) => void
   /** Used only when a file has no language of its own to detect from
    * (e.g. an all-numeric .txt) — the document's actual script always
    * wins over this once there's real text to judge it from. */
   uiLanguageFallback: 'en' | 'ar'
+  /** Wrapper class; defaults to the standalone `mb-6`. The Reader passes
+   * '' to place it in a shared row with the "open from Library" button
+   * (#260); the Library keeps the default. */
+  className?: string
 }) {
   const { t } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -48,7 +53,7 @@ export function FileOpenButton({
   }
 
   return (
-    <div className="mb-6">
+    <div className={className}>
       <input
         ref={inputRef}
         type="file"
