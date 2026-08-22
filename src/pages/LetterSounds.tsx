@@ -22,18 +22,21 @@ const FONT_LATIN = "'Lexend', system-ui, sans-serif"
 type KeywordMode = 'standard' | 'adult'
 type OrderMode = 'alphabetical' | 'ssp'
 
-// SSP (Letters and Sounds Phase 2-3) teaching sequence, per the #118
-// build spec's own "Orderings" section. The spec's own list has 32
-// entries, not 33 — bare "q" is deliberately absorbed into "qu" there
-// ("q is taught as 'qu'"); rather than make one card DISAPPEAR in SSP
-// mode only (a confusing "why did q vanish" inconsistency), this
-// inserts 'q' immediately before 'qu' — the two are taught adjacently
-// either way, so nothing here contradicts the source sequence, it just
-// keeps all 33 cards present in both orderings. Flagged to team-lead
-// as a scope interpretation, not silently assumed.
+// SSP (Letters and Sounds Phase 2, 3 & 5) teaching sequence, per the
+// #118 build spec's own "Orderings" section plus en-phonics's strict
+// placement of the Tier-B vowel teams (#257 / P1-D): the 14 Phase-3
+// vowel digraphs follow 'ng', and the 4 Phase-5 alternatives (ou, oy,
+// wh, ph) close the list. Bare "q" is inserted immediately before "qu"
+// (the spec absorbs it into "qu") so no card DISAPPEARS in SSP mode
+// only. This now lists ALL 51 English cards, so both orderings
+// (alphabetical + SSP) show the SAME set — the Tier-B vowel teams no
+// longer vanish when SSP is selected.
 const SSP_ORDER: string[] = [
-  's', 'a', 't', 'p', 'i', 'n', 'm', 'd', 'g', 'o', 'c', 'k', 'ck', 'e', 'u', 'r', 'h', 'b', 'f', 'l', 'j', 'v', 'w', 'x', 'y', 'z',
-  'q', 'qu', 'ch', 'sh', 'th-unvoiced', 'th-voiced', 'ng',
+  's', 'a', 't', 'p', 'i', 'n', 'm', 'd', 'g', 'o', 'c', 'k', 'ck', 'e', 'u', 'r', 'h', 'b', 'f', 'l',
+  'j', 'v', 'w', 'x', 'y', 'z', 'q', 'qu',
+  'ch', 'sh', 'th-unvoiced', 'th-voiced', 'ng',
+  'ai', 'ee', 'igh', 'oa', 'oo-long', 'oo-short', 'ar', 'or', 'ur', 'ow', 'oi', 'ear', 'air', 'er',
+  'ou', 'oy', 'wh', 'ph',
 ]
 
 function effectiveKeyword(letter: LetterSound, mode: KeywordMode) {
@@ -325,6 +328,17 @@ function LetterTile({
       >
         {letter.grapheme}
       </span>
+      {/* P2-H: a tiny keyword hint under the grapheme so English tiles that
+          share the SAME grapheme (the two "oo" = oo-long/oo-short, the two
+          "th" = th-unvoiced/th-voiced) are no longer visually identical.
+          English only: Arabic graphemes are all distinct and its tiles
+          already carry the dot indicators. aria-hidden because the keyword
+          is already in the button's aria-label (tileAria) above. */}
+      {!rtl && (
+        <span aria-hidden="true" className="max-w-[84px] truncate text-[0.6875rem] font-medium leading-none text-ink-muted">
+          {keyword}
+        </span>
+      )}
       {letter.dotPosition !== 'above' && dotIndicator}
       {dotsDescId && letter.dotCount !== undefined && letter.dotCount > 0 && (
         <span id={dotsDescId} className="sr-only">

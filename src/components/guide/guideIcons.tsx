@@ -1,6 +1,6 @@
 import type { ComponentType, SVGProps } from 'react'
 import type { GuideChapterId } from '../../content/guideSteps'
-import { BreathIcon, ChatIcon, DocumentIcon, LibraryIcon, LightbulbIcon, MindMapIcon, SlidersIcon, SpeakerIcon } from '../icons'
+import { BreathIcon, ChatIcon, DocumentIcon, EarIcon, LibraryIcon, LightbulbIcon, MindMapIcon, SlidersIcon, SpeakerIcon } from '../icons'
 
 type IconType = ComponentType<SVGProps<SVGSVGElement>>
 
@@ -26,6 +26,7 @@ export const GUIDE_CHAPTER_ICON: Record<GuideChapterId, IconType> = {
   techniques: LightbulbIcon,
   readingBuddy: SpeakerIcon,
   mindMaps: MindMapIcon,
+  letterSounds: EarIcon,
   aiAssistant: ChatIcon,
   library: LibraryIcon,
   calmSpace: BreathIcon,

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useDocuments } from '../hooks/useDocuments'
 import { SOURCE_LABEL_KEY } from '../hooks/useProfileData'
 import { MindMapGenerator } from '../components/mindmaps/MindMapGenerator'
+import { isAiBackendConfigured } from '../lib/aiService'
 import { focusRing } from '../lib/focus'
 
 /**
@@ -37,7 +38,12 @@ export function MindMaps() {
   return (
     <main className="mx-auto w-full max-w-[1180px] flex-1 px-6 py-8 sm:px-10">
       <h1 className="mb-2 text-[1.75rem] font-bold text-ink">{t('mindMaps.title')}</h1>
-      <p className="mb-8 max-w-[46rem] text-[0.9375rem] text-ink-muted">{t('mindMaps.subtitle')}</p>
+      {/* #P1-C honesty gate (mirrors Privacy #120): only assert "needs an AI
+          connection that isn't set up yet" in demo; when the backend IS
+          configured, the accurate live copy (paste your own -> a map). */}
+      <p className="mb-8 max-w-[46rem] text-[0.9375rem] text-ink-muted">
+        {isAiBackendConfigured() ? t('mindMaps.subtitleLive') : t('mindMaps.subtitle')}
+      </p>
 
       {/* The one big display area: example by default, the reader's own
           generated map on generate (see MindMapGenerator's own header). */}
@@ -78,7 +84,9 @@ export function MindMaps() {
           <p className="m-0 text-[0.9375rem] font-semibold text-ink">
             {t('mindMaps.needsBackendTitle', { title: selectedDocTitle })}
           </p>
-          <p className="m-0 mt-1.5 text-[0.8125rem] text-ink-muted">{t('mindMaps.needsBackendBody')}</p>
+          <p className="m-0 mt-1.5 text-[0.8125rem] text-ink-muted">
+            {isAiBackendConfigured() ? t('mindMaps.needsBackendBodyLive') : t('mindMaps.needsBackendBody')}
+          </p>
         </div>
       )}
     </main>

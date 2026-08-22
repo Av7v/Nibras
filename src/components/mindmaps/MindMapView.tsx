@@ -676,34 +676,40 @@ export function MindMapView({
                       strokeWidth={2}
                     />
                   )}
-                  <text
-                    x={node.x}
-                    y={node.y}
-                    textAnchor="middle"
-                    fill={isRoot ? ACCENT_INK : INK}
-                    // #258: the SVG wrapper is pinned dir="ltr" (so the
-                    // diagram isn't mirrored), which made the Arabic <text>
-                    // inherit direction:ltr — that garbles any Arabic label
-                    // with punctuation/parentheses or mixed number ordering
-                    // (e.g. «(بصوتٍ عالٍ)», «صفحة 12 من 40»), the «مكسرة»
-                    // break. Pin the text's OWN base direction rtl + isolate
-                    // its bidi so each label resolves right-to-left. Node
-                    // positions are explicit x + textAnchor:middle, so this
-                    // is bidi-only and does NOT move anything.
-                    style={{
-                      fontSize: 12.5,
-                      fontWeight: isRoot ? 700 : 600,
-                      fontFamily: nodeFontFamily,
-                      direction: rtl ? 'rtl' : 'ltr',
-                      unicodeBidi: 'isolate',
-                    }}
-                  >
-                    {lines.map((line, i) => (
-                      <tspan key={i} x={node.x} y={node.y + (i - (lines.length - 1) / 2) * LINE_HEIGHT}>
-                        {line}
-                      </tspan>
-                    ))}
-                  </text>
+                  {/* #258 + #283: pin each label's OWN base direction rtl +
+                      isolate its bidi, so Arabic labels with punctuation,
+                      parentheses or mixed numbers (e.g. «(بصوتٍ عالٍ)»,
+                      «صفحة 12 من 40») resolve right-to-left. #283 (Amal, on
+                      Safari): render each WRAPPED LINE as its own <text>, NOT
+                      <tspan>s inside one <text>. WebKit runs bidi over a whole
+                      <text> as a single paragraph and reorders glyphs ACROSS
+                      the stacked lines (words split + mis-ordered, e.g. «اقرأ»
+                      becomes "اق" / "رأ" on different lines); Chromium does not.
+                      Separate <text> elements are independent bidi paragraphs,
+                      so every line reads correctly in WebKit too. Geometry is
+                      unchanged: same x, same per-line y, same textAnchor:middle.
+                      aria-hidden because the node's accessible name is already
+                      on the overlay <button> below, so these decorative glyphs
+                      are not read twice now that a label can be several texts. */}
+                  {lines.map((line, i) => (
+                    <text
+                      key={i}
+                      x={node.x}
+                      y={node.y + (i - (lines.length - 1) / 2) * LINE_HEIGHT}
+                      textAnchor="middle"
+                      aria-hidden="true"
+                      fill={isRoot ? ACCENT_INK : INK}
+                      style={{
+                        fontSize: 12.5,
+                        fontWeight: isRoot ? 700 : 600,
+                        fontFamily: nodeFontFamily,
+                        direction: rtl ? 'rtl' : 'ltr',
+                        unicodeBidi: 'isolate',
+                      }}
+                    >
+                      {line}
+                    </text>
+                  ))}
                   {hasNote && <circle cx={node.x + NODE_W / 2 - 9} cy={node.y - NODE_H / 2 + 9} r={5} fill={NOTE_DOT} />}
                 </g>
               )

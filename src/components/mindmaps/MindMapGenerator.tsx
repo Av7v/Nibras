@@ -264,6 +264,11 @@ export function MindMapGenerator({ lang }: { lang: 'en' | 'ar' }) {
                 )}
               </div>
               <MindMapView
+                // #263/#264 — remount per map so a new/reset map starts fresh
+                // (collapsedIds, scale, selection are MindMapView-internal state
+                // keyed off mount, not mapId); without this, generate -> Reset
+                // could inherit the previous map's collapsed/zoom, cramping it.
+                key={state.mapId}
                 mapId={state.mapId}
                 title={state.result.root.label}
                 root={state.result.root}
@@ -312,10 +317,10 @@ export function MindMapGenerator({ lang }: { lang: 'en' | 'ar' }) {
             // map" message, live-announced (aria-live, matching the
             // needsBackend/error states' own role="status"/"alert"
             // pattern) since this genuinely updates while the reader
-            // waits. Arabic gets its own honest latency note — measured
-            // directly (proof-151-mindmap-generator.mjs), Arabic
-            // generation is genuinely slower than English's own
-            // comfortably-sub-30s response, not a stall or a bug.
+            // waits. Both languages now show an honest latency note,
+            // since a slow generation can otherwise look dead; real gens
+            // measured ~40-52s (proof-151-mindmap-generator.mjs + pilot
+            // runs 2026-08-22), well under the raised server ceiling.
             <div role="status" aria-live="polite" className="flex h-full min-h-[10rem] flex-col items-center justify-center gap-3 rounded-card border border-dashed border-line-strong p-8 text-center">
               {/* Decorative progress affordance ONLY — the actual
                   status is the text below, already in this aria-live
@@ -331,7 +336,7 @@ export function MindMapGenerator({ lang }: { lang: 'en' | 'ar' }) {
                 <span className="size-2 rounded-full bg-accent motion-safe:animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
               <p className="m-0 motion-safe:animate-pulse text-[0.9375rem] font-semibold text-ink">{t('mindMaps.generator.generatingStatus')}</p>
-              {lang === 'ar' && <p className="m-0 text-[0.8125rem] text-ink-muted">{t('mindMaps.generator.arabicLatencyNote')}</p>}
+              <p className="m-0 text-[0.8125rem] text-ink-muted">{t('mindMaps.generator.latencyNote')}</p>
             </div>
           )}
 
