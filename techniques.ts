@@ -53,7 +53,7 @@ export const TECHNIQUES: Technique[] = [
       whyItHelps:
         'Seeing and hearing each word together strengthens the link between the letters and their sounds, which improves comprehension for readers with reading difficulties.',
       source:
-        'Wood et al., Annals of Dyslexia, 2023 (text-to-speech meta-analysis); audio-visual synchronization research, Speech Communication.',
+        'Wood et al., Journal of Learning Disabilities, 2018 (text-to-speech meta-analysis); Keelor et al., Annals of Dyslexia, 2023 (synchronized highlighting); Gerbier et al., Computer Speech & Language, 2018 (audio-visual synchronization).',
     },
     ar: {
       title: 'اقرأ وأنت تستمع',
@@ -65,7 +65,7 @@ export const TECHNIQUES: Technique[] = [
       ],
       whyItHelps:
         'رؤية الكلمة وسماعها معاً تقوّي الرابط بين الحروف وأصواتها، وهذا يحسّن الفهم لدى من يجدون صعوبة في القراءة.',
-      source: 'وود وزملاؤه، Annals of Dyslexia، 2023.',
+      source: 'وود وزملاؤه، Journal of Learning Disabilities، 2018؛ كيلور وزملاؤه، Annals of Dyslexia، 2023؛ جيربييه وزملاؤه، Computer Speech & Language، 2018.',
     },
   },
   {

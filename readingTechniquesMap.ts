@@ -35,6 +35,17 @@ import { TECHNIQUES, type TechniqueCategory } from './techniques'
  * lets a note or edit made on a node survive a language switch: both
  * are keyed by node id, never by the node's (language-dependent) label
  * text — see mindMapNotes.ts/mindMapEdits.ts.
+ *
+ * Callers (2026-08-26, #281): MindMapGenerator.tsx calls this to build
+ * the "AI Text → Mind Map" module's DEFAULT example map (root -> 3
+ * families -> techniques -> steps, shown on load and after Reset/"Try
+ * the example") — this function itself was briefly ORPHANED between
+ * #264 (2026-08-22, which consolidated the page down to one display
+ * area and swapped the default example for a smaller hand-typed tree)
+ * and #281 (which restored the full family tree as that default,
+ * since Amal wants the 3 families visible then branching, not a flat
+ * 4). Nothing about this function changed across that gap — same
+ * output, same ids, just re-wired to a new call site.
  */
 
 export const READING_TECHNIQUES_MAP_ID = 'reading-techniques'

@@ -1,124 +1,60 @@
-import type { MindMapTreeNode } from './demoMindMaps'
-
 /**
- * Task #151 (2026-08-14) — the "AI Text → Mind Map" module's ONE
- * hand-built, pre-authored worked example: a source paragraph +
- * matching mind map, shown when no AI backend is configured so a
- * demo-mode volunteer can still see what the feature produces without
- * this app ever faking analysis of a real user's own pasted text (see
- * MindMapGenerator.tsx's own header comment for the full honesty
- * reasoning — same rule #112/`translate()` already established).
+ * The "AI Text → Mind Map" module's sample input paragraph (task #151,
+ * 2026-08-14) — see MindMapGenerator.tsx's own header comment for the
+ * full honesty split (pre-authored example always works offline; a
+ * reader's own pasted text only ever attempts a real backend call,
+ * never a faked map).
  *
- * Content (2026-08-19, Amal): the example is Nibras's OWN «تقنيات
- * القراءة» / "Reading Techniques" (was a neutral water-cycle demo),
- * so the generator's worked example teaches the app's own material.
- * Every node label here is pulled VERBATIM from the two source files
- * this app already ships, by id, so the demo example and the static
- * Reading-Techniques map can never drift apart in wording:
- * - the root title = readingTechniquesMap.ts's READING_TECHNIQUES_TITLE
- * - each branch title = a technique's own title (techniques.ts) = the
- *   matching demoMindMaps.ts root label (r2, c1, c3, f2)
- * - each leaf = that technique's own step label (demoMindMaps.ts steps)
- * The paragraph is a short expository lead-in whose sentences name the
- * same four techniques in order, so a real xAI generation of it would
- * plausibly produce this same shape (mindmap.ts's system prompt).
- * Reviewed both languages by nibras-ar + nibras-en.
+ * #281 (2026-08-26, Amal: «الخريطة الذهنية المثال حق تقنيات القراءة مو
+ * كامل، ابغى يظهر فيه الثلاث تقنيات بعدين تتفرع» — wants the example to
+ * show the 3 technique FAMILIES, then branch): the default example map
+ * itself is no longer built here. It used to be a hand-typed, flat
+ * root -> 4 techniques -> 2 steps tree (`MINDMAP_EXAMPLE_TREE` and its
+ * companion id `MINDMAP_GENERATION_EXAMPLE_ID`, both removed);
+ * MindMapGenerator.tsx now builds the tree by calling
+ * `buildReadingTechniquesTree()` (content/readingTechniquesMap.ts) —
+ * the SAME full root -> 3 families -> techniques -> steps teaching map
+ * the standalone Reading-Techniques example used pre-#264, which
+ * itself is built PROGRAMMATICALLY from content/techniques.ts +
+ * content/demoMindMaps.ts so it can never drift out of sync with
+ * either source — and uses that module's own
+ * `READING_TECHNIQUES_MAP_ID` as the example's stable id (not a
+ * second, separately-named id for the same map). This file now only
+ * keeps the sample PARAGRAPH.
  *
- * Same "identical ids across en/ar" convention as
- * readingTechniquesMap.ts — a note or edit made while reading this
- * example in one language still applies to "the same idea" after a
- * language switch, since useMindMapNotes/useMindMapEdits key by
- * mapId+nodeId, never by the (language-dependent) label text.
+ * Paragraph rewritten for the same reason (#281): the old paragraph's
+ * 4 sentences named the SAME 4 techniques the old flat tree branched
+ * into, verbatim, so a real xAI generation of it would plausibly
+ * reproduce roughly that shape — an honest pairing at the time. Once
+ * the default example became the full ~53-node, 4-level family tree,
+ * keeping that same short paragraph next to it would create a real
+ * content mismatch (a paragraph naming 4 specific techniques beside a
+ * map of 13 different techniques across 3 families) — and, more
+ * fundamentally, the /mindmap backend's own schema
+ * (server/api/mindmap.ts's ROOT_SCHEMA) caps a REAL generation at
+ * root -> up to 6 branches -> up to 6 leaves, a flat 3-level shape
+ * that can never actually reproduce the family tree's 4-level nesting
+ * no matter what paragraph is pasted. So this paragraph now names the
+ * example map's own TOP level honestly instead: the 3 real family
+ * names (Reading/Comprehension/Focus — the same
+ * techniques.categoryReading/categoryComprehension/categoryFocus
+ * titles the map's own L2 branches use), one descriptive sentence
+ * each. A real generation from this text would plausibly produce a
+ * root + 3 top-level branches (well within the schema) — an honest,
+ * if partial (top-level only, not all 53 nodes), correspondence to
+ * what "Try the example" actually shows, rather than a full one that
+ * was never achievable once the tree gained a 4th level.
  *
- * Arabic register: plain الفصحى (Modern Standard Arabic), the same
- * light/natural diacritic weight already used for demoMindMaps.ts's
- * own display content (shaddas where they clarify a doubled root
- * letter, no full letter-by-letter تشكيل — that heavier register is
- * reserved for CalmSpace's fixed spoken cues, see calm-cue-wording-136.md).
+ * Arabic register: plain الفصحى (Modern Standard Arabic), matching
+ * this file's own established light diacritic weight (shaddas where
+ * they clarify a doubled root letter or a genuinely ambiguous short
+ * vowel, no full letter-by-letter تشكيل). Drafted by the web/hybrid
+ * engineer for #281 — flagged to team-lead as PENDING a native-Arabic
+ * review pass (nibras-ar), same review step every other Arabic string
+ * in this file has already had; not yet re-confirmed after this edit.
  */
 
-export const MINDMAP_GENERATION_EXAMPLE_ID = 'ai-generation-example'
-
 export const MINDMAP_EXAMPLE_PARAGRAPH: Record<'en' | 'ar', string> = {
-  en: 'A few simple techniques make reading easier and clearer. Give the text room to breathe, with wider line spacing and short paragraphs, so the words feel less crowded. Read the text in small chunks, and after each one, pause to check that you understood it. Then say what you read in your own words: look away from the text, and retell it in a sentence or two, so the meaning sticks. Before you start, clear the clutter around you: close any extra tabs and put your phone out of reach, so your attention stays on the reading.',
-  ar: 'هناك تقنيات بسيطة تجعل القراءة أسهل وأوضح. أعطِ النص مساحةً ليتنفّس، بتباعد أوسع بين الأسطر وفقرات قصيرة، حتى يقلّ ازدحام الكلمات. اقرأ النص على مقاطع صغيرة، وبعد كل مقطع توقّف لتتأكّد من فهمك. ثم عبّر بكلماتك عمّا قرأته: ارفع نظرك عن النص، وأعد سرده بجملة أو جملتين حتى يرسخ المعنى. وقبل أن تبدأ، أبعِد المشتّتات من حولك، فأغلق النوافذ الزائدة وضع الهاتف بعيدًا، ليبقى انتباهك على القراءة.',
-}
-
-export const MINDMAP_EXAMPLE_TREE: Record<'en' | 'ar', MindMapTreeNode> = {
-  en: {
-    id: 'rt-root',
-    label: 'Reading Techniques',
-    children: [
-      {
-        id: 'rt-r2',
-        label: 'Give the text room to breathe',
-        children: [
-          { id: 'rt-r2-a', label: 'Wider line spacing' },
-          { id: 'rt-r2-b', label: 'Keep paragraphs short' },
-        ],
-      },
-      {
-        id: 'rt-c1',
-        label: 'Read in small chunks',
-        children: [
-          { id: 'rt-c1-a', label: 'Read one, then pause' },
-          { id: 'rt-c1-b', label: 'Check you understood it' },
-        ],
-      },
-      {
-        id: 'rt-c3',
-        label: 'Say it in your own words',
-        children: [
-          { id: 'rt-c3-a', label: 'Look away from the text' },
-          { id: 'rt-c3-b', label: 'Retell it in 1-2 sentences' },
-        ],
-      },
-      {
-        id: 'rt-f2',
-        label: 'Clear the clutter',
-        children: [
-          { id: 'rt-f2-a', label: 'Close extra tabs' },
-          { id: 'rt-f2-b', label: 'Put the phone out of reach' },
-        ],
-      },
-    ],
-  },
-  ar: {
-    id: 'rt-root',
-    label: 'تقنيات القراءة',
-    children: [
-      {
-        id: 'rt-r2',
-        label: 'أعطِ النص مساحةً ليتنفّس',
-        children: [
-          { id: 'rt-r2-a', label: 'تباعد أوسع بين الأسطر' },
-          { id: 'rt-r2-b', label: 'فقرات قصيرة' },
-        ],
-      },
-      {
-        id: 'rt-c1',
-        label: 'اقرأ النص على مقاطع صغيرة',
-        children: [
-          { id: 'rt-c1-a', label: 'اقرأ مقطعًا ثم توقف' },
-          { id: 'rt-c1-b', label: 'تأكد من فهمك' },
-        ],
-      },
-      {
-        id: 'rt-c3',
-        label: 'أعد صياغته بكلماتك',
-        children: [
-          { id: 'rt-c3-a', label: 'ارفع نظرك عن النص' },
-          { id: 'rt-c3-b', label: 'أعد سرده بجملة أو جملتين' },
-        ],
-      },
-      {
-        id: 'rt-f2',
-        label: 'أبعِد المشتّتات',
-        children: [
-          { id: 'rt-f2-a', label: 'أغلق النوافذ الزائدة' },
-          { id: 'rt-f2-b', label: 'ضع الهاتف بعيدًا' },
-        ],
-      },
-    ],
-  },
+  en: 'There are many techniques that make reading easier, and they generally fall into three families: Reading, Comprehension, and Focus. Some shape the text itself, giving it more room to breathe with wider spacing and a shorter line. Others help you understand and remember what you read, like breaking it into small chunks and retelling it in your own words. And others help you keep your focus while you read, by clearing the clutter around you and taking a calm breath when your attention drifts.',
+  ar: 'هناك تقنيات كثيرة تجعل القراءة أسهل، وتنقسم عمومًا إلى ثلاث عائلات: القراءة، والفهم، والتركيز. بعضها يشكّل النص نفسه، فيمنحه مساحةً أوسع بتباعد أكبر وسطر أقصر. وبعضها يساعدك على فهم ما تقرأ وتذكّره، كتقسيمه إلى مقاطع صغيرة وإعادة سرده بكلماتك. وبعضها الآخر يساعدك على الحفاظ على تركيزك أثناء القراءة، بإبعاد المشتّتات من حولك وأخذ نفَس هادئ حين يشرد انتباهك.',
 }

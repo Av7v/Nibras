@@ -97,17 +97,20 @@ const XAI_CHAT_URL = 'https://api.x.ai/v1/chat/completions'
 const MODEL = 'grok-4.6'
 
 /** #151 P2-a (nibras-web-reviewer): the fetch below had no timeout at
- * all — a hung/indefinitely-slow provider call would spin forever,
- * taking the client's Generate button with it. Set GENEROUS, not
- * tight: Arabic mind-map generation genuinely measured ~35-37s
- * end-to-end in this exact adapter (proof-151-mindmap-generator.mjs,
- * 2 independent direct-fetch diagnostics) with enough run-to-run
- * variance that one in-suite run needed a 120s margin to reliably
- * clear — so 90s here, comfortably above every real number actually
- * observed, not a guess. The goal is killing a truly stuck request,
- * never capping a normal-but-slow one (team-lead, 2026-08-14, after
- * correcting an earlier too-tight 25-30s suggestion). */
-const REQUEST_TIMEOUT_MS = 90_000
+ * all, so a hung or indefinitely-slow provider call would spin forever,
+ * taking the client's Generate button with it. Set GENEROUS, not tight.
+ * Arabic mind-map generation genuinely measured ~35-37s end-to-end in
+ * this exact adapter (proof-151-mindmap-generator.mjs), and real pilot
+ * gens on 2026-08-22 ran EN 52s / AR 40s, all comfortably under a
+ * minute. But xAI can have a slow moment, and because there is NO retry
+ * a single call that drifts past the ceiling is a HARD failure for a
+ * volunteer, not a retryable blip. So the ceiling sits well above every
+ * real number observed (180s), purely to kill a genuinely stuck
+ * request, never to cap a normal-but-slow one (team-lead, 2026-08-22,
+ * raising an earlier 90s once it was confirmed a real server-side cap
+ * on the xAI call). The client aborts ~10s ABOVE this (aiService.ts) so
+ * this server timeout, with its honest error, wins the race. */
+const REQUEST_TIMEOUT_MS = 180_000
 
 /**
  * Calls xAI for a schema-constrained JSON response. Returns the parsed

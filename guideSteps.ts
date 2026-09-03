@@ -39,7 +39,7 @@ export interface GuideStep {
 // into a compile-time error instead — tsc -b refuses to build once a
 // new id is added here until guideIcons.tsx is also updated, so this
 // specific bug class can't happen again silently.
-export type GuideChapterId = 'reader' | 'settings' | 'techniques' | 'readingBuddy' | 'mindMaps' | 'aiAssistant' | 'library' | 'calmSpace'
+export type GuideChapterId = 'reader' | 'settings' | 'techniques' | 'readingBuddy' | 'mindMaps' | 'letterSounds' | 'aiAssistant' | 'library' | 'calmSpace'
 
 export interface GuideChapter {
   id: GuideChapterId
@@ -86,6 +86,14 @@ export const GUIDE_CHAPTERS: GuideChapter[] = [
     steps: [
       { titleKey: 'guide.mindMapsStep1Title', bodyKey: 'guide.mindMapsStep1Body', flourish: 'sweep' },
       { titleKey: 'guide.mindMapsStep2Title', bodyKey: 'guide.mindMapsStep2Body', flourish: 'reveal' },
+    ],
+  },
+  {
+    id: 'letterSounds',
+    titleKey: 'letterSounds.title',
+    steps: [
+      { titleKey: 'guide.letterSoundsStep1Title', bodyKey: 'guide.letterSoundsStep1Body', flourish: 'reveal' },
+      { titleKey: 'guide.letterSoundsStep2Title', bodyKey: 'guide.letterSoundsStep2Body', flourish: 'pulse' },
     ],
   },
   {

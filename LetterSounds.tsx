@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import {
   ARABIC_LETTER_GROUPS,
   ENGLISH_LETTER_GROUPS,
+  soundClipUrl,
+  wordClipUrl,
   type DotPosition,
   type LetterSound,
 } from '../content/letterSounds'
@@ -22,18 +24,21 @@ const FONT_LATIN = "'Lexend', system-ui, sans-serif"
 type KeywordMode = 'standard' | 'adult'
 type OrderMode = 'alphabetical' | 'ssp'
 
-// SSP (Letters and Sounds Phase 2-3) teaching sequence, per the #118
-// build spec's own "Orderings" section. The spec's own list has 32
-// entries, not 33 — bare "q" is deliberately absorbed into "qu" there
-// ("q is taught as 'qu'"); rather than make one card DISAPPEAR in SSP
-// mode only (a confusing "why did q vanish" inconsistency), this
-// inserts 'q' immediately before 'qu' — the two are taught adjacently
-// either way, so nothing here contradicts the source sequence, it just
-// keeps all 33 cards present in both orderings. Flagged to team-lead
-// as a scope interpretation, not silently assumed.
+// SSP (Letters and Sounds Phase 2, 3 & 5) teaching sequence, per the
+// #118 build spec's own "Orderings" section plus en-phonics's strict
+// placement of the Tier-B vowel teams (#257 / P1-D): the 14 Phase-3
+// vowel digraphs follow 'ng', and the 4 Phase-5 alternatives (ou, oy,
+// wh, ph) close the list. Bare "q" is inserted immediately before "qu"
+// (the spec absorbs it into "qu") so no card DISAPPEARS in SSP mode
+// only. This now lists ALL 51 English cards, so both orderings
+// (alphabetical + SSP) show the SAME set — the Tier-B vowel teams no
+// longer vanish when SSP is selected.
 const SSP_ORDER: string[] = [
-  's', 'a', 't', 'p', 'i', 'n', 'm', 'd', 'g', 'o', 'c', 'k', 'ck', 'e', 'u', 'r', 'h', 'b', 'f', 'l', 'j', 'v', 'w', 'x', 'y', 'z',
-  'q', 'qu', 'ch', 'sh', 'th-unvoiced', 'th-voiced', 'ng',
+  's', 'a', 't', 'p', 'i', 'n', 'm', 'd', 'g', 'o', 'c', 'k', 'ck', 'e', 'u', 'r', 'h', 'b', 'f', 'l',
+  'j', 'v', 'w', 'x', 'y', 'z', 'q', 'qu',
+  'ch', 'sh', 'th-unvoiced', 'th-voiced', 'ng',
+  'ai', 'ee', 'igh', 'oa', 'oo-long', 'oo-short', 'ar', 'or', 'ur', 'ow', 'oi', 'ear', 'air', 'er',
+  'ou', 'oy', 'wh', 'ph',
 ]
 
 function effectiveKeyword(letter: LetterSound, mode: KeywordMode) {
@@ -74,7 +79,7 @@ export function LetterSounds() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [keywordMode, setKeywordMode] = useState<KeywordMode>('standard')
   const [orderMode, setOrderMode] = useState<OrderMode>('alphabetical')
-  const { speakingId, preparingId, errorId, toggle, stop } = useSpeakingController()
+  const { speakingId, preparingId, errorId, toggle, toggleClip, stop } = useSpeakingController()
   const { hasVoiceFor, hasGenderChoiceFor } = useSpeechVoices()
   const voiceAvailable = hasVoiceFor(lang)
   // Task #127 — lifted to THIS level (not inside LetterDetailCard) so
@@ -233,6 +238,7 @@ export function LetterSounds() {
           speakingId={speakingId}
           preparingId={preparingId}
           onSpeak={toggle}
+          onSpeakClip={toggleClip}
           voiceAvailable={voiceAvailable}
           gender={gender}
           rate={voiceRate}
@@ -325,6 +331,17 @@ function LetterTile({
       >
         {letter.grapheme}
       </span>
+      {/* P2-H: a tiny keyword hint under the grapheme so English tiles that
+          share the SAME grapheme (the two "oo" = oo-long/oo-short, the two
+          "th" = th-unvoiced/th-voiced) are no longer visually identical.
+          English only: Arabic graphemes are all distinct and its tiles
+          already carry the dot indicators. aria-hidden because the keyword
+          is already in the button's aria-label (tileAria) above. */}
+      {!rtl && (
+        <span aria-hidden="true" className="max-w-[84px] truncate text-[0.6875rem] font-medium leading-none text-ink-muted">
+          {keyword}
+        </span>
+      )}
       {letter.dotPosition !== 'above' && dotIndicator}
       {dotsDescId && letter.dotCount !== undefined && letter.dotCount > 0 && (
         <span id={dotsDescId} className="sr-only">
@@ -342,6 +359,7 @@ function LetterDetailCard({
   speakingId,
   preparingId,
   onSpeak,
+  onSpeakClip,
   voiceAvailable,
   gender,
   rate,
@@ -352,6 +370,7 @@ function LetterDetailCard({
   speakingId: string | null
   preparingId: string | null
   onSpeak: (id: string, text: string, lang: 'en' | 'ar', opts?: { gender?: VoiceGender; rate?: number }) => void
+  onSpeakClip: (id: string, url: string) => void
   voiceAvailable: boolean
   gender: VoiceGender
   rate: number
@@ -363,11 +382,25 @@ function LetterDetailCard({
   const primaryId = `${letter.id}-sound`
   const keywordId = `${letter.id}-keyword`
   const { keyword, keywordTts } = rtl ? letter : effectiveKeyword(letter, keywordMode)
-  // soundClip -> soundTts -> keywordTts, per the shared seam's own
-  // resolution order — no soundClip exists yet anywhere, so this
-  // always lands on soundTts (Arabic) or keywordTts (English, which
-  // has no soundTts at all).
-  const primaryText = letter.soundClip ?? letter.soundTts ?? keywordTts
+  // Live-TTS text for the ARABIC primary sound pill (the diacritized
+  // syllable). English no longer uses this — it plays real recordings (#289).
+  const primaryText = letter.soundTts ?? keywordTts
+
+  // #289/#308 — English "hear the sound"/"hear the word" ALWAYS play Amal's
+  // REAL recorded clips for the selected voice (Voice 1 = male, Voice 2 =
+  // female) via onSpeakClip, and NEVER route to live TTS. That is the whole
+  // fix for the silent "hear the word" Amal hit on the AI-on preview: the
+  // word pill used to fall back to live neural TTS in adult keyword mode,
+  // which plays NOTHING when the backend/token/voice isn't available (a 401
+  // on an AI-on session, or no browser voice in demo). A recorded clip is a
+  // local file, so it always plays offline / in demo / without a token.
+  // Recordings are of the STANDARD keyword, so adult keyword mode plays that
+  // standard word in her real voice too; the adult swap stays the on-screen
+  // reading example. A word with no recording in the selected voice (only
+  // male-t today) disables honestly rather than cross-voicing or going silent.
+  const enSoundUrl = rtl ? null : soundClipUrl(letter.id, gender)
+  const enWordUrl = rtl ? null : wordClipUrl(letter.id, gender)
+  const enWordUnavailable = !rtl && enWordUrl === null
 
   return (
     <div className="mt-6 rounded-card border border-line bg-card p-6">
@@ -448,26 +481,31 @@ function LetterDetailCard({
               </>
             ) : (
               <>
-                {/* English has no isolated-phoneme audio path yet — a
-                    single, real "Hear the word" action, PLUS an
-                    honestly-disabled "pure sound" affordance instead of
-                    a second button that would silently play the exact
-                    same audio under a misleading different label (the
-                    spec's own explicit interim rule). */}
+                {/* #289: "Hear the sound" plays Amal's real recorded phoneme
+                    clip for the selected voice. Every grapheme now has one in
+                    BOTH voices (her real recordings supersede the earlier
+                    synthetic soundClip/soundTts, and the #284 "word-only for
+                    hard stops" limit is gone). A file always plays, so it needs
+                    no browser voice and is never gated by voiceAvailable. */}
+                <ListenPill
+                  idleLabel={t('letterSounds.hearSound')}
+                  active={speakingId === primaryId}
+                  preparing={preparingId === primaryId}
+                  disabled={false}
+                  onClick={() => onSpeakClip(primaryId, enSoundUrl!)}
+                />
+                {/* #308: "Hear the word" always plays her real recorded WORD
+                    clip (a local file, so it works offline / demo / without a
+                    token) and never routes to silent live TTS. male-t has no
+                    recorded "tap" word yet, so for that ONE voice it degrades
+                    honestly to a disabled control, never the female clip. */}
                 <ListenPill
                   idleLabel={t('letterSounds.hearWord')}
                   active={speakingId === keywordId}
                   preparing={preparingId === keywordId}
-                  disabled={!voiceAvailable}
-                  onClick={() => onSpeak(keywordId, keywordTts, lang, { gender, rate })}
+                  disabled={enWordUnavailable}
+                  onClick={() => { if (enWordUrl) onSpeakClip(keywordId, enWordUrl) }}
                 />
-                <span
-                  aria-label={t('letterSounds.pureSoundComingSoon')}
-                  className="inline-flex min-h-[44px] cursor-not-allowed items-center gap-2 rounded-control border-[1.5px] border-line px-3.5 py-2 text-sm font-semibold text-ink-muted opacity-60"
-                >
-                  <SpeakerIcon className="size-4" aria-hidden="true" />
-                  {t('letterSounds.pureSoundComingSoon')}
-                </span>
               </>
             )}
             {!isAiBackendConfigured() && voiceAvailable && (

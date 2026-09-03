@@ -113,13 +113,15 @@ async function postJson<T>(endpoint: string, body: unknown): Promise<T> {
   const token = getAccessToken()
   if (token) headers['Authorization'] = `Bearer ${token}`
   // Bound every AI call so a cold-starting or hung backend can't spin
-  // forever. The server caps its own work at ~90s, so abort a little ABOVE
-  // that (100s). On abort the fetch rejects (AbortError), taking the SAME
-  // path a network failure already does — synthesizeVoice degrades to the
-  // browser voice, the AI panels show their honest error state — so no new
-  // UI is needed (task P1-a, 2026-08-19).
+  // forever. The server caps its own work at ~180s, so abort a little ABOVE
+  // that (190s), preserving the ~10s client-over-server gap so the server's
+  // own timeout (and its honest error) wins the race instead of a bare
+  // client AbortError. On abort the fetch rejects (AbortError), taking the
+  // SAME path a network failure already does: synthesizeVoice degrades to
+  // the browser voice, the AI panels show their honest error state, so no
+  // new UI is needed (task P1-a, 2026-08-19; ceiling raised 2026-08-22).
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 100_000)
+  const timeout = setTimeout(() => controller.abort(), 190_000)
   try {
     const res = await fetch(`${base}${endpoint}`, {
       method: 'POST',

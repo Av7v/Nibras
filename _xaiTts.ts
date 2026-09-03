@@ -50,12 +50,8 @@ const MAX_CHARS = 15000
 
 /** Arabic target register is MODERN STANDARD ARABIC (الفصحى) — Amal's
  * explicit requirement for the reading voice: فصحى only, no regional
- * dialect. The exact xAI setting that yields the cleanest MSA reading
- * (language code + which of the 5 voices) is PENDING nibras-ar's
- * listen-test: 'ar-SA' is only a starting point and may carry a Gulf
- * accent; 'auto' (proven 2026-08-13) also reads فصحى text. Do NOT ship
- * the Arabic voice publicly until nibras-ar confirms the chosen setting
- * reads clean فصحى. `en` → en-GB (British English — Amal's
+ * dialect. 'ar-SA' is Amal's confirmed setting (reads clean فصحى on
+ * xAI's multilingual voices). `en` → en-GB (British English — Amal's
  * ear-confirmed choice 2026-08-20, both voices rex + eve; xAI voices are
  * all "multilingual" so this language hint, not a dedicated voice, is
  * what steers the accent). */
