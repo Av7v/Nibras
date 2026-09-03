@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AccessTokenError, generateMindMap, isAiBackendConfigured, SpendCapError, type MindMapResult } from '../../lib/aiService'
-import { MINDMAP_EXAMPLE_PARAGRAPH, MINDMAP_EXAMPLE_TREE, MINDMAP_GENERATION_EXAMPLE_ID } from '../../content/mindmapGenerationExample'
+import { MINDMAP_EXAMPLE_PARAGRAPH } from '../../content/mindmapGenerationExample'
+import { buildReadingTechniquesTree, READING_TECHNIQUES_MAP_ID } from '../../content/readingTechniquesMap'
+import { type TechniqueCategory } from '../../content/techniques'
+import { CATEGORY_TITLE_KEY } from '../../pages/Techniques'
 import { MindMapView } from './MindMapView'
 import { MindMapIcon } from '../icons'
 import { focusRing } from '../../lib/focus'
@@ -56,10 +59,13 @@ function newGeneratedMapId(): string {
  * even attempting the call, the same upfront-check pattern
  * MindMaps.tsx's own document-picker already used) rather than a
  * silently-wrong result. Separately, "Try the example" ALWAYS works —
- * a pre-authored, hand-built tree (content/mindmapGenerationExample.ts),
- * clearly labeled the same "مثال/Example" way the Reader's own example
- * texts already are, so a demo-mode volunteer can still see the
- * feature genuinely working.
+ * a pre-authored tree, built by `buildReadingTechniquesTree()`
+ * (content/readingTechniquesMap.ts, #281, 2026-08-26: Amal wants the 3
+ * technique families shown, then branching out) from
+ * content/techniques.ts + content/demoMindMaps.ts so it can never
+ * drift out of sync with either source, clearly labeled the same
+ * "مثال/Example" way the Reader's own example texts already are, so a
+ * demo-mode volunteer can still see the feature genuinely working.
  *
  * Renders the actual result through the EXISTING MindMapView — no
  * parallel diagram renderer — so node editing, the whole-map/per-node
@@ -79,19 +85,37 @@ function newGeneratedMapId(): string {
 export function MindMapGenerator({ lang }: { lang: 'en' | 'ar' }) {
   const { t } = useTranslation()
 
+  // Family (L2) labels come from the SAME i18n keys as the Techniques
+  // page's own category headings (CATEGORY_TITLE_KEY) — resolved here,
+  // where t() is available, and passed into the plain-data builder
+  // function (readingTechniquesMap.ts has no i18next access of its own,
+  // see that file's own header comment for why).
+  const familyLabel: Record<TechniqueCategory, string> = {
+    reading: t(CATEGORY_TITLE_KEY.reading),
+    comprehension: t(CATEGORY_TITLE_KEY.comprehension),
+    focus: t(CATEGORY_TITLE_KEY.focus),
+  }
+
   // #264 (Amal: «نفس فكرة القارئ ... فيه مثال الآن لكن المستخدمين يقدرون
   // يحطون شي ثاني») — mirror the Reader: the pre-authored example map shows
   // BY DEFAULT in the big display area on load (no click needed); a reader's
   // own pasted paragraph REPLACES it in that same area. The example always
   // works offline/demo; a real generation runs only with an AI backend
   // configured (handleGenerate), otherwise the honest needs-a-connection state.
+  // #281 (2026-08-26): the example itself is the FULL root -> 3 families ->
+  // techniques -> steps teaching map (buildReadingTechniquesTree), not a flat
+  // hand-picked 4 — Amal wants the 3 families visible, then branching out.
+  // MindMapView's own default-collapsed behavior (every non-root node with
+  // children starts collapsed) already renders exactly that: root + 3
+  // families on open, each family/technique expandable on demand — no change
+  // needed there.
   const exampleState = (l: 'en' | 'ar'): GeneratorState => ({
     kind: 'result',
-    result: { root: MINDMAP_EXAMPLE_TREE[l], demo: true },
+    result: { root: buildReadingTechniquesTree(l, familyLabel), demo: true },
     isExample: true,
     // Stable across re-renders AND across languages (readingTechniquesMap.ts's
     // own convention) so a note/edit on the example survives a language switch.
-    mapId: MINDMAP_GENERATION_EXAMPLE_ID,
+    mapId: READING_TECHNIQUES_MAP_ID,
   })
 
   const [sourceText, setSourceText] = useState('')
@@ -137,8 +161,15 @@ export function MindMapGenerator({ lang }: { lang: 'en' | 'ar' }) {
     }
   }
 
-  // «جرّب المثال» loads the example's own source paragraph too, so a reader
-  // can see (and tweak) the text that produced the default example map.
+  // «جرّب المثال» loads a sample paragraph too, so a reader can see (and
+  // tweak) a plausible kind of input for the paste-a-paragraph flow above.
+  // #281: this paragraph is an honest lead-in for the example map's own TOP
+  // level (it names the same 3 real family names the map's own L2 branches
+  // use — see mindmapGenerationExample.ts's own header comment for why it
+  // is deliberately NOT claimed to reproduce the whole ~53-node map: the
+  // real /mindmap backend's schema caps a generation at root -> branches ->
+  // leaves, 3 levels, so no pasted text — this one included — could ever
+  // make a live generation come back with the map's actual 4-level nesting).
   function handleTryExample() {
     setSourceText(MINDMAP_EXAMPLE_PARAGRAPH[lang])
     setState(exampleState(lang))

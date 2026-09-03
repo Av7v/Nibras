@@ -54,3 +54,6 @@ public/ort/
 # Backend spend-cap ledger (#148) — machine-local usage state written by
 # server/index.ts's spend cap, not source. Never committed.
 server/.usage/
+
+# Claude Code workspace state (never ship)
+.claude/

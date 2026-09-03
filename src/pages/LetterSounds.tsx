@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import {
   ARABIC_LETTER_GROUPS,
   ENGLISH_LETTER_GROUPS,
+  soundClipUrl,
+  wordClipUrl,
   type DotPosition,
   type LetterSound,
 } from '../content/letterSounds'
@@ -77,7 +79,7 @@ export function LetterSounds() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [keywordMode, setKeywordMode] = useState<KeywordMode>('standard')
   const [orderMode, setOrderMode] = useState<OrderMode>('alphabetical')
-  const { speakingId, preparingId, errorId, toggle, stop } = useSpeakingController()
+  const { speakingId, preparingId, errorId, toggle, toggleClip, stop } = useSpeakingController()
   const { hasVoiceFor, hasGenderChoiceFor } = useSpeechVoices()
   const voiceAvailable = hasVoiceFor(lang)
   // Task #127 — lifted to THIS level (not inside LetterDetailCard) so
@@ -236,6 +238,7 @@ export function LetterSounds() {
           speakingId={speakingId}
           preparingId={preparingId}
           onSpeak={toggle}
+          onSpeakClip={toggleClip}
           voiceAvailable={voiceAvailable}
           gender={gender}
           rate={voiceRate}
@@ -356,6 +359,7 @@ function LetterDetailCard({
   speakingId,
   preparingId,
   onSpeak,
+  onSpeakClip,
   voiceAvailable,
   gender,
   rate,
@@ -366,6 +370,7 @@ function LetterDetailCard({
   speakingId: string | null
   preparingId: string | null
   onSpeak: (id: string, text: string, lang: 'en' | 'ar', opts?: { gender?: VoiceGender; rate?: number }) => void
+  onSpeakClip: (id: string, url: string) => void
   voiceAvailable: boolean
   gender: VoiceGender
   rate: number
@@ -377,11 +382,25 @@ function LetterDetailCard({
   const primaryId = `${letter.id}-sound`
   const keywordId = `${letter.id}-keyword`
   const { keyword, keywordTts } = rtl ? letter : effectiveKeyword(letter, keywordMode)
-  // soundClip -> soundTts -> keywordTts, per the shared seam's own
-  // resolution order — no soundClip exists yet anywhere, so this
-  // always lands on soundTts (Arabic) or keywordTts (English, which
-  // has no soundTts at all).
-  const primaryText = letter.soundClip ?? letter.soundTts ?? keywordTts
+  // Live-TTS text for the ARABIC primary sound pill (the diacritized
+  // syllable). English no longer uses this — it plays real recordings (#289).
+  const primaryText = letter.soundTts ?? keywordTts
+
+  // #289/#308 — English "hear the sound"/"hear the word" ALWAYS play Amal's
+  // REAL recorded clips for the selected voice (Voice 1 = male, Voice 2 =
+  // female) via onSpeakClip, and NEVER route to live TTS. That is the whole
+  // fix for the silent "hear the word" Amal hit on the AI-on preview: the
+  // word pill used to fall back to live neural TTS in adult keyword mode,
+  // which plays NOTHING when the backend/token/voice isn't available (a 401
+  // on an AI-on session, or no browser voice in demo). A recorded clip is a
+  // local file, so it always plays offline / in demo / without a token.
+  // Recordings are of the STANDARD keyword, so adult keyword mode plays that
+  // standard word in her real voice too; the adult swap stays the on-screen
+  // reading example. A word with no recording in the selected voice (only
+  // male-t today) disables honestly rather than cross-voicing or going silent.
+  const enSoundUrl = rtl ? null : soundClipUrl(letter.id, gender)
+  const enWordUrl = rtl ? null : wordClipUrl(letter.id, gender)
+  const enWordUnavailable = !rtl && enWordUrl === null
 
   return (
     <div className="mt-6 rounded-card border border-line bg-card p-6">
@@ -462,26 +481,31 @@ function LetterDetailCard({
               </>
             ) : (
               <>
-                {/* English has no isolated-phoneme audio path yet — a
-                    single, real "Hear the word" action, PLUS an
-                    honestly-disabled "pure sound" affordance instead of
-                    a second button that would silently play the exact
-                    same audio under a misleading different label (the
-                    spec's own explicit interim rule). */}
+                {/* #289: "Hear the sound" plays Amal's real recorded phoneme
+                    clip for the selected voice. Every grapheme now has one in
+                    BOTH voices (her real recordings supersede the earlier
+                    synthetic soundClip/soundTts, and the #284 "word-only for
+                    hard stops" limit is gone). A file always plays, so it needs
+                    no browser voice and is never gated by voiceAvailable. */}
+                <ListenPill
+                  idleLabel={t('letterSounds.hearSound')}
+                  active={speakingId === primaryId}
+                  preparing={preparingId === primaryId}
+                  disabled={false}
+                  onClick={() => onSpeakClip(primaryId, enSoundUrl!)}
+                />
+                {/* #308: "Hear the word" always plays her real recorded WORD
+                    clip (a local file, so it works offline / demo / without a
+                    token) and never routes to silent live TTS. male-t has no
+                    recorded "tap" word yet, so for that ONE voice it degrades
+                    honestly to a disabled control, never the female clip. */}
                 <ListenPill
                   idleLabel={t('letterSounds.hearWord')}
                   active={speakingId === keywordId}
                   preparing={preparingId === keywordId}
-                  disabled={!voiceAvailable}
-                  onClick={() => onSpeak(keywordId, keywordTts, lang, { gender, rate })}
+                  disabled={enWordUnavailable}
+                  onClick={() => { if (enWordUrl) onSpeakClip(keywordId, enWordUrl) }}
                 />
-                <span
-                  aria-label={t('letterSounds.pureSoundComingSoon')}
-                  className="inline-flex min-h-[44px] cursor-not-allowed items-center gap-2 rounded-control border-[1.5px] border-line px-3.5 py-2 text-sm font-semibold text-ink-muted opacity-60"
-                >
-                  <SpeakerIcon className="size-4" aria-hidden="true" />
-                  {t('letterSounds.pureSoundComingSoon')}
-                </span>
               </>
             )}
             {!isAiBackendConfigured() && voiceAvailable && (

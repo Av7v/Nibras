@@ -182,6 +182,32 @@ export const PRIVACY_SECTIONS: PrivacySection[] = [
         'الطريقة الدقيقة التي يعمل بها متصفحك تحديدًا خارجة عن تحكّم نبراس؛ فمعظم المتصفحات تنطق النص بالكامل على جهازك، وقد يستخدم بعضها صوتًا عبر الإنترنت توفّره الشركة المصنّعة للمتصفح أو الجهاز نفسها، بمعزل عن نبراس.',
       ],
     },
+    // REAL-AI variant (golive-sec P1, 2026-09-03): the demo claim above
+    // ("your device's own built-in text-to-speech... does not transmit
+    // this audio or the text") goes FALSE the instant a real AI backend
+    // is configured — `aiService.synthesizeVoice()` (confirmed directly,
+    // src/lib/aiService.ts:266-284) POSTs the text to `/voice` and plays
+    // back a server-rendered file whenever `isAiBackendConfigured()` is
+    // true, for BOTH the Reading Techniques listen feature and Reading
+    // Buddy (same shared function, every caller: ReadingBuddyPlayer.tsx,
+    // CalmSpace.tsx, useSpeakingController.ts). Same
+    // ephemeral/never-store/never-train framing the 'ai-features' REAL
+    // variant already uses for text, since this is the same kind of
+    // request (your reading text, sent to generate one response).
+    enReal: {
+      heading: 'Read-aloud: Reading Techniques and Reading Buddy, now with a real AI voice',
+      body: [
+        "The Reading Techniques listen feature and the Reader's Reading Buddy player are now connected to a real AI voice, called through our own server. When you use either one, the text being read aloud is sent to that AI service in order to generate the spoken audio.",
+        'That text is handled ephemerally: used only to generate the audio you asked for, then discarded, and never used to train AI models. This only happens the moment you actively start read-aloud, and only for the text you asked to have read.',
+      ],
+    },
+    arReal: {
+      heading: 'الاستماع: تقنيات القراءة ورفيق القراءة، بصوت ذكاء اصطناعي حقيقي الآن',
+      body: [
+        'تتصل الآن ميزة «استماع» في تقنيات القراءة، وكذلك مشغّل «رفيق القراءة» في القارئ، بصوت ذكاء اصطناعي حقيقي يُستدعى عبر خادمنا الخاص. وعند استخدام أي منهما، يُرسَل النص المطلوب قراءته بصوت عالٍ إلى تلك الخدمة لتوليد المقطع الصوتي.',
+        'يُعالَج ذلك النص بشكل مؤقت فقط: يُستخدم لتوليد الصوت الذي طلبته ثم يُحذف، ولا يُستخدم أبدًا لتدريب نماذج الذكاء الاصطناعي. ولا يحدث ذلك إلا لحظة بدئك الفعلي للاستماع، وفقط للنص الذي طلبت قراءته بصوت عالٍ.',
+      ],
+    },
   },
   {
     // #150 (2026-08-14) — Reading Buddy's LISTENING direction is privacy-
@@ -213,6 +239,50 @@ export const PRIVACY_SECTIONS: PrivacySection[] = [
         'يرافقك مساعد الاستماع في رفيق القراءة أثناء قراءتك بصوت عالٍ، ويقدّم لك توجيهًا لطيفًا، باللغة الإنجليزية حاليًا. تعتمد هذه الخاصية على تقنية التعرّف على الكلام المدمجة في متصفحك على جهازك، وتعالج صوتك بالكامل على جهازك أنت. لا يسجّل نبراس هذا الصوت، ولا يخزّنه، ولا يُرسله إلى أي مكان.',
         'يطلب منك متصفحك الإذن باستخدام الميكروفون أول مرة تستخدم فيها هذه الميزة، ولا يحدث ذلك إلا حين تبدأ جلسة الاستماع بنفسك بالضغط على زر الميكروفون؛ فالميكروفون لا يعمل في الخلفية أبدًا. وإذا لم تكن هذه الخاصية متاحة في متصفحك أو جهازك، فلن يوفّر نبراس مساعد الاستماع هناك، ولن يلجأ أبدًا إلى إرسال صوتك إلى خدمة خارجية بديلة.',
         'أما القراءة بالعربية فلا تستخدم الميكروفون بعد. حاليًا، يقرأ لك نبراس النص بالعربية بصوت عالٍ، ويتيح لك الضغط على أي كلمة لسماعها بوضوح، دون أي جلسة استماع. والاستماع المباشر بالعربية مخطَّط له في تحديث قادم، ومن المتوقع أن يعمل بالطريقة نفسها، أي بالكامل على جهازك. وسنحدّث هذه السياسة عند بدء ذلك.',
+      ],
+    },
+    // REAL-AI variant (golive-sec P1, 2026-09-03): the demo claim above
+    // ("Arabic doesn't use the microphone yet... planned for a future
+    // update") goes FALSE the instant a real AI backend is configured —
+    // `useReadingCoachSession.ts`'s own `listeningAvailable` (confirmed
+    // directly, ~line 192) is `isAiBackendConfigured()` for Arabic
+    // specifically, and its mic flow calls `transcribe()`
+    // (src/lib/aiService.ts), which POSTs the recorded clip to `/stt`
+    // (real xAI STT) whenever that flag is true. English is UNCHANGED by
+    // this flag either way (`listeningAvailable` for English depends only
+    // on on-device browser support, never on the AI backend) — paragraphs
+    // 1-2 below stay true in both demo and real, only the Arabic
+    // paragraph (and the heading's "for now") needed correcting.
+    //
+    // Numbers below (third-party, US servers, never trains, 30-day
+    // provider-side deletion, Nibras itself never stores it, shown +
+    // agreed to before the first session) are copied from the ALREADY
+    // reviewed, user-facing point-of-use consent dialog itself
+    // (i18n `readingBuddy.consentBody`, en.json/ar.json — task #238,
+    // "Apply final blessed AR-listening consent strings") rather than the
+    // looser "handled ephemerally... discarded" phrasing the sibling
+    // 'ai-features' REAL variant uses for plain text — that dialog
+    // discloses a specific 30-day deletion window for the voice
+    // recording, not near-immediate discarding, and this policy must not
+    // understate that by reusing the text-only framing for a recording of
+    // the reader's own voice. Deliberately still says "AI service"/an
+    // unnamed "third-party" here rather than naming xAI, matching this
+    // file's own established convention (see 'ai-features' REAL
+    // variant) — only the consent dialog itself names the vendor.
+    enReal: {
+      heading: "Reading Buddy's listening coach (English and Arabic)",
+      body: [
+        "In English, Reading Buddy's listening coach follows along and gives gentle feedback as you read aloud. It uses your browser's own on-device speech recognition, and processes your voice entirely on your device. Nibras does not record, store, or transmit this audio anywhere.",
+        "Your browser asks for microphone permission the first time you use it, and only because you actively started a listening session by tapping the microphone button. It is never active in the background. If on-device recognition isn't available on your browser or device, Nibras simply won't offer the listening coach there. It never falls back to sending your voice to an outside service.",
+        "Arabic Reading Buddy's listening coach is now available too. When you use it, your recorded voice clip is sent to a third-party transcription service (on servers in the United States), called through our own server, in order to turn your speech into text. It is used only for that purpose, is never used to train AI models, and the service deletes it within 30 days. Nibras itself never stores your voice recording. Before your first Arabic listening session, you're shown these details and asked to agree.",
+      ],
+    },
+    arReal: {
+      heading: 'الميكروفون في رفيق القراءة (بالإنجليزية والعربية)',
+      body: [
+        'يرافقك مساعد الاستماع في رفيق القراءة أثناء قراءتك بصوت عالٍ، ويقدّم لك توجيهًا لطيفًا. بالإنجليزية، تعتمد هذه الخاصية على تقنية التعرّف على الكلام المدمجة في متصفحك على جهازك، وتعالج صوتك بالكامل على جهازك أنت؛ لا يسجّل نبراس هذا الصوت، ولا يخزّنه، ولا يُرسله إلى أي مكان.',
+        'يطلب منك متصفحك الإذن باستخدام الميكروفون أول مرة تستخدم فيها هذه الميزة، ولا يحدث ذلك إلا حين تبدأ جلسة الاستماع بنفسك بالضغط على زر الميكروفون؛ فالميكروفون لا يعمل في الخلفية أبدًا. وإذا لم تكن هذه الخاصية متاحة في متصفحك أو جهازك، فلن يوفّر نبراس مساعد الاستماع هناك، ولن يلجأ أبدًا إلى إرسال صوتك إلى خدمة خارجية بديلة.',
+        'أصبح مساعد الاستماع في رفيق القراءة متاحًا الآن للعربية أيضًا، عبر خادمنا الخاص. وعند استخدامه، يُرسَل مقطع صوتك المسجَّل إلى خدمة خارجية لتحويل الكلام إلى نص، تعمل على خوادم في الولايات المتحدة، ويُستخدم هذا المقطع لهذا الغرض فقط. لا يُستخدم أبدًا لتدريب أي نموذج ذكاء اصطناعي، وتحذفه تلك الخدمة خلال ثلاثين يومًا، ولا يخزّن نبراس نفسه تسجيل صوتك مطلقًا. وقبل أول جلسة استماع بالعربية، تُعرض عليك هذه التفاصيل ويُطلب منك الموافقة.',
       ],
     },
   },

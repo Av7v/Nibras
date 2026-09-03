@@ -134,6 +134,37 @@ export function useSpeakingController() {
     if (myGen === genRef.current) setSpeakingId(started ? id : null)
   }
 
+  /** #284: play a FIXED pre-rendered audio FILE (a `soundClip` URL), not
+   * live TTS. Used by Letter Sounds for the 9 sounds a live voice can't say
+   * right on its own: the clip is served from public/ and plays AS-IS at its
+   * baked rate (NEVER the user's global speed, which is why s/h needed a fixed
+   * clip), works AI-on or AI-off, and needs no browser voice. Shares the
+   * one-at-a-time + generation guard with `toggle` via the same audioRef. */
+  async function toggleClip(id: string, url: string) {
+    if (speakingId === id || preparingId === id) {
+      stop()
+      return
+    }
+    stopSpeaking()
+    audioRef.current?.pause()
+    setErrorId(null)
+    const myGen = ++genRef.current
+    if (!audioRef.current) audioRef.current = new Audio()
+    const audio = audioRef.current
+    audio.src = url
+    audio.playbackRate = 1 // clip is pre-rendered at the approved rate
+    audio.onended = () => clearCurrent(id)
+    audio.onerror = () => clearCurrent(id)
+    try {
+      await audio.play()
+      if (myGen !== genRef.current) return
+      setPreparingId((c) => (c === id ? null : c))
+      setSpeakingId(id)
+    } catch {
+      clearCurrent(id)
+    }
+  }
+
   /** Explicit stop, independent of a toggle click — needed anywhere the
    * app itself changes what's on screen while speech might still be
    * playing (e.g. the Guide navigating to a different step). Bumps the
@@ -147,5 +178,5 @@ export function useSpeakingController() {
     setErrorId(null)
   }
 
-  return { speakingId, preparingId, errorId, toggle, stop }
+  return { speakingId, preparingId, errorId, toggle, toggleClip, stop }
 }

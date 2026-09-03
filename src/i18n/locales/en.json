@@ -320,7 +320,7 @@
   "letterSounds": {
     "title": "Letter Sounds",
     "subtitle": "Learn the sound each letter makes. Tap a letter to hear it and see it in a word.",
-    "audioNotice": "All letters are here. Sounds are read by an AI voice for now. Hand-checked recordings for the trickiest ones are coming next.",
+    "audioNotice": "Every letter has a clear recording of its sound and an example word.",
     "groupAlifHamza": "Alif & Hamza",
     "groupBaFamily": "The ب family",
     "groupJeemFamily": "The ج family",
@@ -359,7 +359,6 @@
     "pictureLabel": "Picture",
     "hearSound": "Hear the sound",
     "hearWord": "Hear the word",
-    "pureSoundComingSoon": "Pure sound: better audio coming soon",
     "seeInWord": "See it in a word",
     "positionIsolated": "Alone",
     "positionInitial": "Start of a word",
