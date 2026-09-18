@@ -46,6 +46,9 @@ export function useDocuments() {
     sourceType: SourceType
     lang: 'en' | 'ar'
     title?: string
+    /** Only meaningful for sourceType 'example' — see ReaderDocument's
+     * own `exampleId` doc comment in lib/documents.ts. */
+    exampleId?: string
   }): { id: string; prunedTitle: string | null } {
     const id = hashSections(input.sections)
     const existing = state.documents[id]
@@ -62,6 +65,7 @@ export function useDocuments() {
           position: { sectionIndex: 0, fraction: 0 },
           bookmarks: [],
           notes: [],
+          exampleId: input.exampleId,
         }
     const { documents, dropped } = pruneDocuments({ ...state.documents, [id]: doc })
     // Task #143 — also track this as the per-language auto-reopen

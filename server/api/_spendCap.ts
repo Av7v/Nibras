@@ -125,6 +125,11 @@ export interface SpendCap {
   readonly globalCapUsd: number
   getTokenSpendUsd(tokenId: string): number
   getGlobalSpendUsd(): number
+  /** The cap that ACTUALLY applies to this token: its override if one is
+   * configured for it, else the shared `perTokenCapUsd`. Exposed so a
+   * caller can read back "what cap is this token really under" without
+   * re-deriving the override lookup itself. */
+  getEffectiveCapUsd(tokenId: string): number
   /** null if the call is allowed; otherwise the reason it is blocked.
    * The per-token cap is checked first (the primary, per-volunteer
    * limit); the global backstop second. Checked BEFORE the provider call
@@ -167,20 +172,40 @@ function persist(usageFile: string, ledger: Ledger): void {
   renameSync(tmp, usageFile)
 }
 
-export function createSpendCap(opts: { perTokenCapUsd: number; globalCapUsd?: number; usageFile: string }): SpendCap {
+export function createSpendCap(opts: {
+  perTokenCapUsd: number
+  globalCapUsd?: number
+  usageFile: string
+  /** 2026-09-15 (Amal-approved, via team-lead): an escape hatch for a
+   * NAMED, non-volunteer token (e.g. the internal token used to produce
+   * the guide videos) that legitimately needs more headroom than the
+   * $1.50 per-VOLUNTEER default, WITHOUT touching that default for
+   * everyone else. Keyed the same way the ledger itself is — a token's
+   * SHA-256 hex id (see `_accessControl.ts`'s `identify()`) — so this
+   * can be wired from a hash-only env var (`AI_PRODUCTION_TOKEN_HASH` in
+   * server/index.ts): no raw token ever needs to pass through this
+   * config. Absent/undefined => no overrides => byte-identical to the
+   * pre-#537 behaviour (every token shares `perTokenCapUsd`). At real
+   * go-live this must be unset so volunteer + committee codes are all
+   * governed by the one protective default (see server/index.ts's own
+   * note on this). */
+  perTokenCapOverridesUsd?: Record<string, number>
+}): SpendCap {
   const globalCapUsd = opts.globalCapUsd ?? Number.POSITIVE_INFINITY
   const ledger = loadLedger(opts.usageFile)
 
   const tokenSpend = (id: string): number => ledger.tokens[id]?.estSpendUsd ?? 0
   const globalSpend = (): number => Object.values(ledger.tokens).reduce((sum, t) => sum + t.estSpendUsd, 0)
+  const effectiveCap = (id: string): number => opts.perTokenCapOverridesUsd?.[id] ?? opts.perTokenCapUsd
 
   return {
     perTokenCapUsd: opts.perTokenCapUsd,
     globalCapUsd,
     getTokenSpendUsd: tokenSpend,
     getGlobalSpendUsd: globalSpend,
+    getEffectiveCapUsd: effectiveCap,
     checkAllowed(tokenId, estCostUsd) {
-      if (tokenSpend(tokenId) + estCostUsd > opts.perTokenCapUsd) return 'token_cap_reached'
+      if (tokenSpend(tokenId) + estCostUsd > effectiveCap(tokenId)) return 'token_cap_reached'
       if (globalSpend() + estCostUsd > globalCapUsd) return 'global_cap_reached'
       return null
     },

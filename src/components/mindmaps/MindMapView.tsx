@@ -4,6 +4,7 @@ import type { MindMapTreeNode } from '../../content/demoMindMaps'
 import { useMindMapNotes } from '../../hooks/useMindMapNotes'
 import { useMindMapEdits } from '../../hooks/useMindMapEdits'
 import { useMindMapColors } from '../../hooks/useMindMapColors'
+import { useMindMapBackground } from '../../hooks/useMindMapBackground'
 import { useSpeakingController } from '../../hooks/useSpeakingController'
 import { useSpeechVoices } from '../../hooks/useSpeechVoices'
 import { useVoicePreference } from '../../hooks/useVoicePreference'
@@ -13,7 +14,7 @@ import { exportSvgAsPng } from '../../lib/exportSvg'
 import { isAiBackendConfigured } from '../../lib/aiService'
 import { hexToHsl, hslToHex } from '../../lib/color'
 import { focusRing } from '../../lib/focus'
-import { AddIcon, ChevronIcon, DownloadIcon, EditIcon, NoteIcon, PaletteIcon, SpeakerIcon, StopIcon } from '../icons'
+import { AddIcon, ChevronIcon, DownloadIcon, EditIcon, NoteIcon, PaletteIcon, SpeakerIcon, StopIcon, TrashIcon } from '../icons'
 import { SpeakerButton } from '../techniques/SpeakerButton'
 import { ColorWheelField, TypefaceField, type TypefaceOption } from '../reader/SettingsFields'
 import { FONT_STACKS, LATIN_TYPEFACE_LABEL_KEY, ARABIC_TYPEFACE_LABEL_KEY, type ArabicTypeface, type LatinTypeface } from '../../lib/readingSettings'
@@ -55,12 +56,19 @@ const EXPORT_BACKGROUND = '#FBF8F0'
 // Values duplicate index.css's --color-accent/-card/-ink/-line-strong
 // tokens (see that file's own palette comment) — update both places
 // together if the palette changes.
-const ACCENT = '#004aad'
+const ACCENT = '#002147'
 const ACCENT_INK = '#ffffff'
 const CARD = '#fbf8f0'
 const INK = '#37312b'
 const LINE_STRONG = '#947e52'
 const NOTE_DOT = '#f7a062'
+
+// #364 — the map-background wheel's starting colour when a map has NO
+// custom background yet (with no override the canvas keeps its default
+// bg-cream/50 look). == index.css --color-cream / the `cream` reading
+// tint. INK (above) is the darkest on-canvas element (labels/edges), so
+// it's the contrast reference the wheel warns against.
+const MAP_CANVAS_DEFAULT_BG = '#f5efe2'
 
 // Branch-color palette (task #204, 2026-08-18) — ONLY applied when the
 // caller passes `colorByBranch` (the AI generator's output AND, since
@@ -181,6 +189,11 @@ function collectDefaultCollapsedIds(node: MindMapTreeNode, depth: number, out: S
  * tree) is never mutated; persisted edits are merged onto it fresh
  * every render via applyMindMapEdits(), so the SAME effective tree
  * drives the on-screen diagram AND the PNG export automatically.
+ * #441 (2026-09-14, Amal) rounds this out to a real edit/delete/add
+ * loop: selecting a node in edit mode now focuses its label field
+ * directly (selectNode below), and a Delete button removes the
+ * selected node (and its whole subtree) via the same overlay
+ * mechanism, guarded so the root can never be the one deleted.
  */
 export function MindMapView({
   mapId,
@@ -213,7 +226,7 @@ export function MindMapView({
   const { t } = useTranslation()
   const rtl = lang === 'ar'
   const { notes, setNote } = useMindMapNotes(mapId)
-  const { edits, setLabel, addNode } = useMindMapEdits(mapId)
+  const { edits, setLabel, addNode, deleteNode } = useMindMapEdits(mapId)
   const { speakingId, preparingId, errorId, toggle: toggleSpeaking, stop: stopSpeakingHere } = useSpeakingController()
   const { hasVoiceFor } = useSpeechVoices()
   const voiceAvailable = hasVoiceFor(lang)
@@ -241,6 +254,9 @@ export function MindMapView({
   // it's always shown (wherever colouring is a feature) and simply
   // colours whichever idea is selected.
   const { colors, setColor } = useMindMapColors(mapId)
+  // #364 — per-map custom canvas background (independent of node colours
+  // and of the global page colour). null = no override → default look.
+  const { background: mapBg, setBackground: setMapBg } = useMindMapBackground(mapId)
 
   // #263 — zoom (enlarge/shrink) the diagram. A CSS transform scales the
   // SVG AND its overlay buttons together (they share one wrapper), so they
@@ -359,6 +375,23 @@ export function MindMapView({
     setSelectedNodeId(id)
     setDraftNote(notes[id] ?? '')
     setDraftLabel(nodes.find((n) => n.id === id)?.label ?? '')
+    // #441 (Amal): today, selecting a node in edit mode still needs a
+    // SEPARATE click into the label field before you can type — this
+    // closes that gap by focusing it the moment a node is selected, so
+    // "click box -> edit its text" is one motion instead of two. Only
+    // while editMode is on: outside edit mode the label field isn't
+    // even rendered below, so there'd be nothing to focus. Deliberately
+    // no .select() here (unlike handleAddBranch's own focus below) — an
+    // EXISTING label usually already says something meaningful, so this
+    // places the caret without pre-selecting (and risking one keystroke
+    // wiping) the whole thing; select-all stays reserved for a brand
+    // new node's placeholder text, which really is meant to be replaced
+    // wholesale.
+    if (editMode) {
+      requestAnimationFrame(() => {
+        labelInputRef.current?.focus()
+      })
+    }
   }
 
   /** Reads one node aloud: its label, plus its note if the reader added
@@ -420,6 +453,30 @@ export function MindMapView({
       labelInputRef.current?.focus()
       labelInputRef.current?.select()
     })
+  }
+
+  /** #441 (Amal, «مسح المستطيلات والاسم»): deletes the SELECTED node —
+   * both its box and its text disappear, and (applyMindMapEdits) so
+   * does everything nested under it. `selectedNode.depth === 0` is the
+   * same "is this the root" test the SVG render loop already uses
+   * elsewhere in this file; this is the runtime half of the root guard
+   * (the Delete button below is also `disabled` for the root, so in
+   * practice a click can't even reach this function while the root is
+   * selected — this early-return is the defensive backstop, same
+   * pattern as handleAddBranch's own `if (!selectedNodeId) return`
+   * above). Clears the selection + drafts afterward (the deleted id
+   * would otherwise dangle in `selectedNodeId` — harmless since it just
+   * stops matching anything in `nodes`, but explicit is clearer than
+   * relying on that) and stops any audio in case the deleted node was
+   * the one currently being read aloud — mirrors selectNode's own
+   * "a selection change stops stale audio" reasoning above. */
+  function handleDeleteNode() {
+    if (!selectedNode || selectedNode.depth === 0) return
+    deleteNode(selectedNode.id)
+    stopSpeakingHere()
+    setSelectedNodeId(null)
+    setDraftNote('')
+    setDraftLabel('')
   }
 
   async function handleExport() {
@@ -581,6 +638,11 @@ export function MindMapView({
       <div
         ref={scrollRef}
         className="relative min-h-[34rem] max-h-[80vh] overflow-auto rounded-control border border-line bg-cream/50"
+        // #364 — a custom map background (from the wheel below) is a solid
+        // inline colour that overrides the default bg-cream/50 wash; with
+        // no override we leave the class alone so the default look (which
+        // also respects the global #350 page colour) is unchanged.
+        style={mapBg ? { backgroundColor: mapBg } : undefined}
         dir="ltr"
         onWheel={(e) => {
           // ctrl/⌘ + wheel = pinch-zoom (trackpad) or Ctrl+wheel (mouse);
@@ -842,6 +904,48 @@ export function MindMapView({
             </div>
           )}
         </div>
+
+        {/* #364 — map BACKGROUND colour wheel (Amal, after previewing
+            #350). Reuses the reader's colour wheel + its live contrast
+            safeguard (valueIsBackground flips the preview to show ink text
+            on the chosen colour; the warning checks against INK, the
+            darkest on-canvas element). Always shown (the canvas has a
+            background on every map, unlike node colouring); INDEPENDENT of
+            node colours and of the global page colour; persisted per map. */}
+        <div className="mt-3 rounded-control border border-line bg-cream/50 p-3.5">
+          <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-ink">
+            <PaletteIcon className="size-4 text-accent" aria-hidden="true" />
+            {t('mindMaps.bgColorButton')}
+          </div>
+          <ColorWheelField
+            idPrefix={`mindmap-bg-${mapId}`}
+            legend={t('mindMaps.bgColorLegend')}
+            caption={t('mindMaps.bgColorCaption')}
+            value={mapBg ?? MAP_CANVAS_DEFAULT_BG}
+            onChange={(hex) => setMapBg(hex)}
+            backgroundHex={INK}
+            valueIsBackground
+            lightnessLabel={t('settings.textColorLightness')}
+            hexLabel={t('settings.textColorHexLabel')}
+            previewLabel={t('settings.textColorPreviewLabel')}
+            wheelAriaLabel={(hex) => t('mindMaps.bgColorWheelLabel', { hex })}
+            formatContrastLabel={(ratio) => t('settings.contrastWithTextLabel', { ratio })}
+            contrastGoodLabel={t('settings.contrastGood')}
+            contrastWarningLabel={t('settings.bgContrastWarningLow')}
+            sampleText={rtl ? 'أب' : 'Aa'}
+          />
+          {mapBg && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setMapBg(null)}
+                className={`inline-flex items-center gap-1.5 rounded-control border-[1.5px] border-line-strong px-3.5 py-1.5 text-[0.8125rem] font-semibold text-ink-muted hover:border-accent hover:text-accent ${focusRing}`}
+              >
+                {t('mindMaps.resetBgButton')}
+              </button>
+            </div>
+          )}
+        </div>
         {editMode && selectedNode && (
           <div className="rounded-control border border-line bg-cream/50 p-3.5">
             <label htmlFor="mindmap-label" className="mb-1.5 block text-[0.8125rem] font-semibold text-ink">
@@ -857,24 +961,52 @@ export function MindMapView({
               dir={rtl ? 'rtl' : 'ltr'}
               className={`w-full rounded-control border-[1.5px] border-line-strong bg-card p-2 text-[0.8125rem] text-ink ${focusRing}`}
             />
-            <div className="mt-2 flex flex-wrap justify-end gap-2">
+            {/* #441 — Delete stays visually grouped with Add/Save (same
+                neutral outline style already used for every OTHER
+                secondary action in this app, e.g. Library's own
+                remove-book/remove-folder buttons: no red/danger colour
+                anywhere in this codebase's destructive actions, kept
+                consistent here rather than introducing one). It's
+                pushed to the row's OPPOSITE edge (justify-between, own
+                inner group for Add+Save) so it reads as a distinct,
+                separated action rather than a third item in the same
+                cluster — still a single click, no confirmation step,
+                matching Save Text/Add a Branch's own no-confirm model. */}
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
               <button
                 type="button"
-                onClick={handleAddBranch}
-                className={`inline-flex items-center gap-1.5 rounded-control border-[1.5px] border-line-strong px-3.5 py-1.5 text-[0.8125rem] font-semibold text-ink-muted hover:border-accent hover:text-accent ${focusRing}`}
+                onClick={handleDeleteNode}
+                disabled={selectedNode.depth === 0}
+                title={selectedNode.depth === 0 ? t('mindMaps.deleteRootDisabledHint') : undefined}
+                aria-label={
+                  selectedNode.hasChildren
+                    ? t('mindMaps.deleteNodeWithChildrenLabel', { label: selectedNode.label })
+                    : t('mindMaps.deleteNodeLabel', { label: selectedNode.label })
+                }
+                className={`inline-flex items-center gap-1.5 rounded-control border-[1.5px] border-line-strong px-3.5 py-1.5 text-[0.8125rem] font-semibold text-ink-muted hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`}
               >
-                <AddIcon className="size-3.5" />
-                {t('mindMaps.addBranch')}
+                <TrashIcon className="size-3.5" />
+                {t('mindMaps.deleteNodeButton')}
               </button>
-              <button
-                type="button"
-                onClick={saveDraftLabel}
-                disabled={!draftLabel.trim()}
-                className={`inline-flex items-center gap-1.5 rounded-control bg-accent px-3.5 py-1.5 text-[0.8125rem] font-semibold text-accent-ink hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`}
-              >
-                <EditIcon className="size-3.5" />
-                {t('mindMaps.saveText')}
-              </button>
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleAddBranch}
+                  className={`inline-flex items-center gap-1.5 rounded-control border-[1.5px] border-line-strong px-3.5 py-1.5 text-[0.8125rem] font-semibold text-ink-muted hover:border-accent hover:text-accent ${focusRing}`}
+                >
+                  <AddIcon className="size-3.5" />
+                  {t('mindMaps.addBranch')}
+                </button>
+                <button
+                  type="button"
+                  onClick={saveDraftLabel}
+                  disabled={!draftLabel.trim()}
+                  className={`inline-flex items-center gap-1.5 rounded-control bg-accent px-3.5 py-1.5 text-[0.8125rem] font-semibold text-accent-ink hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50 ${focusRing}`}
+                >
+                  <EditIcon className="size-3.5" />
+                  {t('mindMaps.saveText')}
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -6,6 +6,7 @@ import {
   saveReadingSettings,
   type ArabicSettings,
   type LatinSettings,
+  type ReadingRulerMode,
   type RulerColor,
 } from '../lib/readingSettings'
 
@@ -36,11 +37,20 @@ export function useReadingSettings() {
   const [state, setState] = useState(() => loadReadingSettings())
 
   useEffect(() => {
-    // Re-read voiceRate/voiceGender fresh rather than trusting this
-    // instance's own (possibly stale — see the hook's own header
-    // comment) copy of those 2 fields.
+    // Re-read voiceRate/voiceGender/pageBackground fresh rather than
+    // trusting this instance's own (possibly stale — see the hook's
+    // own header comment) copy of those fields. pageBackground (task
+    // #350) joined this same re-read-fresh merge for the exact same
+    // reason voiceRate/voiceGender did: it has its own live-reactive
+    // owner (lib/pageBackgroundPreference.ts) that can write to this
+    // SAME storage key from a different mounted surface at any time.
     const current = loadReadingSettings()
-    saveReadingSettings({ ...state, voiceRate: current.voiceRate, voiceGender: current.voiceGender })
+    saveReadingSettings({
+      ...state,
+      voiceRate: current.voiceRate,
+      voiceGender: current.voiceGender,
+      pageBackground: current.pageBackground,
+    })
   }, [state])
 
   function updateLatin(patch: Partial<LatinSettings>) {
@@ -65,6 +75,23 @@ export function useReadingSettings() {
   function setReadingRulerColor(readingRulerColor: RulerColor) {
     setState((s) => ({ ...s, readingRulerColor }))
   }
+  // Task #360 — same "script-independent, not part of either
+  // typography profile" reasoning as the ruler pair just above, so
+  // these are untouched by resetLatin/resetArabic too.
+  function setDimmerEnabled(dimmerEnabled: boolean) {
+    setState((s) => ({ ...s, dimmerEnabled }))
+  }
+  function setDimmerIntensity(dimmerIntensity: number) {
+    setState((s) => ({ ...s, dimmerIntensity }))
+  }
+  // Task #361 — same "script-independent mechanism preference" shape
+  // as the pair above, so also untouched by resetLatin/resetArabic.
+  function setReadingRulerMode(readingRulerMode: ReadingRulerMode) {
+    setState((s) => ({ ...s, readingRulerMode }))
+  }
+  function setWordSyncRulerColor(wordSyncRulerColor: RulerColor) {
+    setState((s) => ({ ...s, wordSyncRulerColor }))
+  }
   // voiceRate/voiceGender are deliberately NOT exposed here anymore
   // (task #145) — use hooks/useVoicePreference.ts instead, which is
   // live-reactive across every mounted surface; this hook's own state
@@ -76,11 +103,19 @@ export function useReadingSettings() {
     arabic: state.arabic,
     readingRuler: state.readingRuler,
     readingRulerColor: state.readingRulerColor,
+    dimmerEnabled: state.dimmerEnabled,
+    dimmerIntensity: state.dimmerIntensity,
+    readingRulerMode: state.readingRulerMode,
+    wordSyncRulerColor: state.wordSyncRulerColor,
     updateLatin,
     updateArabic,
     resetLatin,
     resetArabic,
     setReadingRuler,
     setReadingRulerColor,
+    setDimmerEnabled,
+    setDimmerIntensity,
+    setReadingRulerMode,
+    setWordSyncRulerColor,
   }
 }

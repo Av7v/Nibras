@@ -106,7 +106,12 @@ export class VoiceUnavailableError extends Error {
   }
 }
 
-async function postJson<T>(endpoint: string, body: unknown): Promise<T> {
+/** `callerSignal` (optional, added for task #398 review P2 — see
+ * synthesizeVoice's own comment) lets a caller cancel its OWN in-flight
+ * request early — e.g. ReadingBuddyPlayer superseding a stale
+ * startPlayback() call — without weakening the timeout below, which
+ * every caller still gets regardless of whether it passes a signal. */
+async function postJson<T>(endpoint: string, body: unknown, callerSignal?: AbortSignal): Promise<T> {
   const base = backendUrl()
   if (!base) throw new Error('No AI backend configured')
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -122,6 +127,19 @@ async function postJson<T>(endpoint: string, body: unknown): Promise<T> {
   // new UI is needed (task P1-a, 2026-08-19; ceiling raised 2026-08-22).
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 190_000)
+  // Forward the caller's own cancellation into the SAME controller that
+  // already drives the timeout above, rather than passing two signals
+  // to fetch (AbortSignal.any exists but is newer than this app wants
+  // to depend on for a P2 hardening fix) — either source aborts the one
+  // real fetch. addEventListener, not a subscription that needs its own
+  // cleanup elsewhere: removed in the `finally` below either way.
+  function onCallerAbort() {
+    controller.abort()
+  }
+  if (callerSignal) {
+    if (callerSignal.aborted) controller.abort()
+    else callerSignal.addEventListener('abort', onCallerAbort)
+  }
   try {
     const res = await fetch(`${base}${endpoint}`, {
       method: 'POST',
@@ -148,6 +166,7 @@ async function postJson<T>(endpoint: string, body: unknown): Promise<T> {
     return (await res.json()) as T
   } finally {
     clearTimeout(timeout)
+    callerSignal?.removeEventListener('abort', onCallerAbort)
   }
 }
 
@@ -227,6 +246,30 @@ export async function translate(text: string, from: AiLang, to: AiLang): Promise
 }
 
 // ---------------------------------------------------------------------
+// ask — task #369. The mascot's grounded «اسألني عن الصفحة» page Q&A.
+// The reader asks a free question about the CURRENT page; the backend
+// answers using ONLY the server-owned per-page facts (grounding lives
+// server-side, never sent from here — the client only passes which page
+// it's on). Like translate(), there is deliberately NO demo path: a
+// canned/fake page answer would be dishonest, so this ALWAYS throws
+// until a real backend is configured. The UI surfaces the ask box only
+// when AI is on (isAiBackendConfigured) and shows an honest "coming
+// soon" state otherwise, and marks every answer as AI-generated.
+// ---------------------------------------------------------------------
+
+export interface AskResult {
+  answer: string
+  demo: false
+}
+
+export async function ask(pageId: string, question: string, lang: AiLang): Promise<AskResult> {
+  if (isAiBackendConfigured()) {
+    return postJson<AskResult>('/ask', { pageId, question, lang })
+  }
+  throw new Error('ask(): no demo path — a grounded page answer needs a real AI connection')
+}
+
+// ---------------------------------------------------------------------
 // synthesizeVoice — fully built this slice (Reading Buddy).
 // ---------------------------------------------------------------------
 
@@ -254,28 +297,32 @@ export type SynthesizeVoiceResult =
   | { mode: 'browser'; demo: true }
   | { mode: 'audio'; url: string; demo: false }
 
-/** DEMO (today, always, since no backend is configured yet): confirms
- * a matching browser voice exists and hands back `{mode: 'browser'}` —
- * the caller (ReadingBuddyPlayer) then drives lib/textToSpeech.ts's
- * `speak()` directly with the same gender/rate, since Web Speech has no
- * "give me an audio file" mode to return here.
- * REAL (once VITE_AI_BACKEND_URL is set): POSTs to the backend, which
- * returns a URL to a rendered audio file; falls back to the DEMO
- * result if the real call fails for any reason, so Reading Buddy never
- * goes silent just because a backend call had a bad moment. */
-export async function synthesizeVoice(req: SynthesizeVoiceRequest): Promise<SynthesizeVoiceResult> {
+/** `signal` (task #398 review P2, 2026-09-14) — ReadingBuddyPlayer can
+ * cancel an in-flight synthesizeVoice() call when a NEWER one supersedes
+ * it (a quick rate/voice change, or a second Play press, while the
+ * "preparing…" render takes a few seconds) — see startPlayback's own
+ * comment. Optional and additive: every other existing caller
+ * (summarize/explain/translate/ask/transcribe) still calls postJson
+ * with no third argument and is completely unaffected. */
+export async function synthesizeVoice(req: SynthesizeVoiceRequest, signal?: AbortSignal): Promise<SynthesizeVoiceResult> {
   if (isAiBackendConfigured()) {
     try {
-      return await postJson<SynthesizeVoiceResult>('/voice', req)
+      return await postJson<SynthesizeVoiceResult>('/voice', req, signal)
     } catch (err) {
       // AccessTokenError/SpendCapError are MEANINGFUL, actionable states —
       // re-throw them so the caller shows the honest "enter your code" /
-      // "limit reached" message (task #219). EVERY OTHER failure (network,
-      // 5xx, a 429 rate-limit, a client timeout) becomes a
-      // VoiceUnavailableError — it must NOT silently drop to the FREE
-      // browser voice, which is exactly what Amal heard on تقنيات القراءة
-      // when a /voice call failed (2026-08-19, "only my two neural voices").
+      // "limit reached" message (task #219). An intentional client-side
+      // abort (the caller's OWN newer request superseded this one) is
+      // NOT a real failure either — rethrow as-is so the caller can
+      // recognize it and stay silent instead of flashing a spurious
+      // "voice unavailable" for a request it cancelled on purpose.
+      // EVERY OTHER failure (network, 5xx, a 429 rate-limit, a client
+      // timeout) becomes a VoiceUnavailableError — it must NOT silently
+      // drop to the FREE browser voice, which is exactly what Amal heard
+      // on تقنيات القراءة when a /voice call failed (2026-08-19, "only my
+      // two neural voices").
       if (err instanceof AccessTokenError || err instanceof SpendCapError) throw err
+      if (err instanceof DOMException && err.name === 'AbortError') throw err
       throw new VoiceUnavailableError()
     }
   }

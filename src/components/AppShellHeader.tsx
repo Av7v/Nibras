@@ -1,6 +1,8 @@
 import type { Ref } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router'
+import { BackgroundSettingsControl } from './BackgroundSettingsControl'
+import { useFocusModeActive } from './FocusMode'
 import { useHeaderSlotContent } from './HeaderSlot'
 import { MenuIcon } from './icons'
 import { VoiceSettingsControl } from './VoiceSettingsControl'
@@ -69,47 +71,58 @@ export function AppShellHeader({
   const { t, i18n } = useTranslation()
   const { pathname } = useLocation()
   const slotContent = useHeaderSlotContent()
+  // Task #360 — the Reader's "Focus mode" toggle asks this header to
+  // hide everything BELOW except the page's own injected slot content
+  // (see AppShell.tsx's own comment on this same flag for the full
+  // reasoning: those slot buttons are reading controls, not site
+  // chrome, and one of them is the reader's own way back out).
+  const focusActive = useFocusModeActive()
 
   return (
     <header className="sticky top-0 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-cream/85 px-6 py-3 backdrop-blur-sm sm:px-8">
-      <button
-        ref={menuButtonRef}
-        type="button"
-        onClick={onOpenMenu}
-        aria-label={t('dashboard.openMenuLabel')}
-        className={`flex size-9 flex-none items-center justify-center rounded-control text-ink-muted hover:bg-accent-tint hover:text-accent md:hidden ${focusRingInset}`}
-      >
-        <MenuIcon className="size-5" />
-      </button>
-      <p className="m-0 min-w-0 flex-1 truncate text-[0.8125rem] font-medium text-ink-muted">
-        {t('dashboard.breadcrumbTemplate', { brand: t('brand'), page: t(pageLabelKey(pathname)) })}
-      </p>
+      {!focusActive && (
+        <>
+          <button
+            ref={menuButtonRef}
+            type="button"
+            onClick={onOpenMenu}
+            aria-label={t('dashboard.openMenuLabel')}
+            className={`flex size-9 flex-none items-center justify-center rounded-control text-ink-muted hover:bg-accent-tint hover:text-accent md:hidden ${focusRingInset}`}
+          >
+            <MenuIcon className="size-5" />
+          </button>
+          <p className="m-0 min-w-0 flex-1 truncate text-[0.8125rem] font-medium text-ink-muted">
+            {t('dashboard.breadcrumbTemplate', { brand: t('brand'), page: t(pageLabelKey(pathname)) })}
+          </p>
 
-      <div
-        role="group"
-        aria-label={t('header.languageLabel')}
-        className="inline-flex flex-none overflow-hidden rounded-full border-[1.5px] border-line-strong"
-      >
-        <button
-          type="button"
-          aria-pressed={i18n.language === 'en'}
-          onClick={() => i18n.changeLanguage('en')}
-          className={`px-3.5 py-1.5 text-sm font-semibold text-ink-muted aria-pressed:bg-accent aria-pressed:text-accent-ink ${focusRingInset}`}
-        >
-          EN
-        </button>
-        <button
-          type="button"
-          lang="ar"
-          aria-pressed={i18n.language === 'ar'}
-          onClick={() => i18n.changeLanguage('ar')}
-          className={`px-3.5 py-1.5 text-sm font-semibold text-ink-muted aria-pressed:bg-accent aria-pressed:text-accent-ink ${focusRingInset}`}
-        >
-          ع
-        </button>
-      </div>
+          <div
+            role="group"
+            aria-label={t('header.languageLabel')}
+            className="inline-flex flex-none overflow-hidden rounded-full border-[1.5px] border-line-strong"
+          >
+            <button
+              type="button"
+              aria-pressed={i18n.language === 'en'}
+              onClick={() => i18n.changeLanguage('en')}
+              className={`px-3.5 py-1.5 text-sm font-semibold text-ink-muted aria-pressed:bg-accent aria-pressed:text-accent-ink ${focusRingInset}`}
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              lang="ar"
+              aria-pressed={i18n.language === 'ar'}
+              onClick={() => i18n.changeLanguage('ar')}
+              className={`px-3.5 py-1.5 text-sm font-semibold text-ink-muted aria-pressed:bg-accent aria-pressed:text-accent-ink ${focusRingInset}`}
+            >
+              ع
+            </button>
+          </div>
 
-      <VoiceSettingsControl />
+          <BackgroundSettingsControl />
+          <VoiceSettingsControl />
+        </>
+      )}
 
       {slotContent}
     </header>

@@ -1,0 +1,22 @@
+WEBVTT
+
+STYLE
+::cue { background-color: rgba(247,241,227,0.92); color:#28241E; font-family:"Lexend","Atkinson Hyperlegible",sans-serif; line-height:1.4; font-size:140%; font-weight:600; }
+
+00:00:01.000 --> 00:00:04.790
+This is the Library, your place to keep your books and files.
+
+00:00:06.120 --> 00:00:09.580
+Add a book: open a file, or paste text.
+
+00:00:09.610 --> 00:00:12.140
+It's read on your device, never uploaded.
+
+00:00:13.470 --> 00:00:16.370
+Sort them into folders with a name and a colour.
+
+00:00:17.700 --> 00:00:20.840
+And reopen any book, right where you left off.
+
+00:00:22.170 --> 00:00:24.830
+All of it, private, on your device.

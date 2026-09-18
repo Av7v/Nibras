@@ -120,6 +120,7 @@ export function VoiceSettingsControl() {
         aria-expanded={isOpen}
         aria-controls="voice-settings-panel"
         aria-label={t('header.voiceSettingsLabel')}
+        title={t('header.voiceSettingsLabel')}
         onClick={() => setIsOpen((v) => !v)}
         className={`flex size-9 items-center justify-center rounded-control text-ink-muted hover:bg-accent-tint hover:text-accent ${isOpen ? 'bg-accent-tint text-accent' : ''} ${focusRingInset}`}
       >

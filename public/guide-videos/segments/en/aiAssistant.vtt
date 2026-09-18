@@ -1,0 +1,16 @@
+WEBVTT
+
+STYLE
+::cue { background-color: rgba(247,241,227,0.92); color:#28241E; font-family:"Lexend","Atkinson Hyperlegible",sans-serif; line-height:1.4; font-size:140%; font-weight:600; }
+
+00:00:01.000 --> 00:00:02.940
+This is the AI Assistant.
+
+00:00:04.270 --> 00:00:07.480
+It summarises what you're reading, or explains it simply.
+
+00:00:08.810 --> 00:00:11.950
+Choose Summarise, and the summary appears.
+
+00:00:13.280 --> 00:00:16.110
+Your AI Assistant, part of Nibras.

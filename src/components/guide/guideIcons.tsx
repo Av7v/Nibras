@@ -1,6 +1,6 @@
 import type { ComponentType, SVGProps } from 'react'
 import type { GuideChapterId } from '../../content/guideSteps'
-import { BreathIcon, ChatIcon, DocumentIcon, EarIcon, LibraryIcon, LightbulbIcon, MindMapIcon, SlidersIcon, SpeakerIcon } from '../icons'
+import { BreathIcon, ChatIcon, DocumentIcon, EarIcon, LanternIcon, LibraryIcon, LightbulbIcon, MindMapIcon, PaletteIcon, SpeakerIcon } from '../icons'
 
 type IconType = ComponentType<SVGProps<SVGSVGElement>>
 
@@ -21,8 +21,8 @@ type IconType = ComponentType<SVGProps<SVGSVGElement>>
  * can't happen silently again — `tsc -b` now refuses to build if a
  * chapter id from guideSteps.ts has no matching entry here. */
 export const GUIDE_CHAPTER_ICON: Record<GuideChapterId, IconType> = {
+  colours: PaletteIcon,
   reader: DocumentIcon,
-  settings: SlidersIcon,
   techniques: LightbulbIcon,
   readingBuddy: SpeakerIcon,
   mindMaps: MindMapIcon,
@@ -30,4 +30,11 @@ export const GUIDE_CHAPTER_ICON: Record<GuideChapterId, IconType> = {
   aiAssistant: ChatIcon,
   library: LibraryIcon,
   calmSpace: BreathIcon,
+  // The one purpose-built glyph in this map: «مرشد نبراس» has no icon
+  // elsewhere to reuse, so LanternIcon is drawn to match this set (task
+  // #518) — a line-glyph نبراس lantern, replacing the colour animated
+  // NibrasGuideFace that used to render here and stuck out beside its 10
+  // flat siblings. NibrasGuideFace still drives the animated mascot in the
+  // sidebar/launcher/chat; only this static guide-grid tile switched.
+  guideMascot: LanternIcon,
 }

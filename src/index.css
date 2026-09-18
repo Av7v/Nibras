@@ -90,48 +90,117 @@
     ink-muted #6B6055 on cream    -> 5.34:1
     line-strong #947E52 on card   -> 3.34–3.69:1 (WCAG 1.4.11 UI-component floor)
 
-  Accent = Nibras brand blue #004aad (Amal's original منصة نبراس brand
-  deck, swapped from the interim Oxford blue #002147 2026-08-12).
-  Sampled — not eyeballed — via a canvas pixel read of the deck's own
-  rendered pages (research/nibras/_pdftmp/nibras-brand-page-{1,5,8}.png):
-  6 independent regions (2 solid-fill shapes on page 1, the page-1
-  wordmark stroke, 2 solid-fill rectangles on page 8, the page-5
-  heading stroke) all agreed on the exact same #004aad, taking each
-  region's modal pixel color to reject anti-aliased edge noise. Only
-  the accent changed — cream/card/ink/line above are untouched.
-  #004aad -> HSL(214.3°, 100%, 33.9%) — same hue family as the interim
-  Oxford blue (212°) but notably lighter/brighter. accent-hover/-active/
-  -darker are the same hue+saturation at different lightness steps
-  (+10%/-4.5%/-7.5% L), same method as the Oxford-blue swap; accent-tint
-  reuses the OLD tint's own (S≈4.75%, L≈95.5%) recipe with the new hue —
-  that recipe's job is "match the old tint's whisper-subtlety," not
-  derive a fresh cap, confirmed still ~1.0:1 bg-vs-bg against the page
-  (was ~1.03:1 before, is 1.033:1 now — no regression). Contrast
-  RE-VERIFIED because this blue is brighter than Oxford blue (team-lead
-  flagged this explicitly) — passes AA with real margin regardless:
-    white on accent (button)         -> 8.13:1
-    white on accent-hover            -> 5.60:1  (lowest margin — hover-only, transient)
-    white on accent-active           -> 9.66:1
-    accent as text/link on cream     -> 7.10:1
-    accent as text/link on card      -> 7.66:1
-    accent as text on accent-tint (badges) -> 7.33:1
-  All clear WCAG AA's 4.5:1 (most clear AAA's 7:1 too) — no separate
-  darker "text-only" variant was needed.
+  Accent = Oxford navy #002147 (Amal via team-lead, 2026-09-15 — the
+  PRIMARY brand colour, not a shade of anything else). Supersedes the
+  2026-08-12 swap to the deck-sampled #004aad above: this reverts index.css
+  to the same Oxford navy the app briefly carried before that swap, this
+  time as the deliberate, permanent primary rather than an interim value.
+  Independently confirmed against the canonical static mockup
+  (research/nibras/design/mockups/mockup.css), which has specified this
+  EXACT family since 2026-08-12 and was never updated for the interim
+  #004aad detour: its hand-authored --accent/-hover/-active/-darker
+  (#002147/#00397A/#001630/#000F21) match this file's own re-run of the
+  derivation below byte-for-byte, and its own documented contrast numbers
+  (16.05 / 11.25 / 18.14:1) match too — two independently-maintained
+  sources converging on the same numbers.
+
+  Derivation (same method as the #004aad family above): hue+saturation
+  held from #002147 itself — HSL(212.11°, 100%, 13.92%), already fully
+  saturated, no forcing needed — then accent-hover/-active/-darker step
+  lightness by the SAME +10%/-4.5%/-7.5% L ladder used for every accent
+  swap so far. accent-tint reuses the same (S≈4.75%, L≈95.5%) recipe with
+  this hue: lands on the exact same #f3f3f4 as before (212° and 214° round
+  identically at this low a saturation) — zero visual change to every
+  badge/hover-fill that reads accent-tint. (The static mockup's own
+  independently hand-picked tint for this same #002147, #EEF3F9, is close
+  but not identical — pre-existing, harmless drift between the two files;
+  both clear AA on accent-as-text by a wide margin either way.)
+  Script-verified (WCAG 2.2 relative-luminance, not eyeballed):
+    white on accent (button)         -> 16.05:1
+    white on accent-hover            -> 11.25:1
+    white on accent-active           -> 18.14:1
+    white on accent-darker           -> 19.26:1
+    accent as text/link on cream     -> 14.01:1
+    accent as text/link on card      -> 15.12:1
+    accent as text on accent-tint (badges) -> 14.47:1
+  All clear WCAG AA's 4.5:1 with wide margin (all clear AAA's 7:1 too) —
+  going darker than #004aad can only improve every one of these numbers,
+  confirmed rather than assumed.
+
+  CRITICAL check done BEFORE shipping this (a very dark accent risks
+  failing contrast wherever it would sit on an already-dark surface, not
+  just where it sits on light ones): audited every `bg-accent` (accent as
+  a solid FILL, the only "dark surface" this app has — the sidebar rail +
+  small pressed-state pills) app-wide. Every single one already pairs the
+  fill with WHITE (`--color-accent-ink`) foreground, never accent-as-text
+  on accent-as-background, so there is no dark-surface AA failure here to
+  begin with. Specifically re-checked the sidebar's `text-accent-ink/NN`
+  opacity treatment (NavItem/tagline/footer/guest — the same spot the
+  2026-08-12 swap had to recalibrate for this exact reason, see
+  AppShellSidebar.tsx's own comment): since the fill got DARKER, every
+  existing opacity level got a SAFER margin, not riskier —
+    72% white on accent (mascot-row label, "help"/"privacy" links) -> 4.97:1 old, 8.81:1 new
+    75% white on accent (sidebar tagline)                          -> 5.28:1 old, 9.47:1 new
+    78% white on accent (guest "not signed in" line)                -> 5.56:1 old, 10.12:1 new
+    82% white on accent (NavItem default state)                     -> 5.97:1 old, 11.07:1 new
+  No opacity recalibration needed this time.
+
+  --color-accent-on-dark (#248aff, new token, added but not yet consumed
+  anywhere): a precautionary LIGHTER on-brand tint — same 212° hue, full
+  saturation, L=57% — for the day some future accent-as-FOREGROUND
+  (text/icon/link/focus-ring) genuinely needs to sit on a real dark
+  surface. Verified >=4.5:1 against every dark surface this app actually
+  has (accent itself as a bg, accent-active as a bg) plus generic
+  near-black, so raw --color-accent (too dark itself once the surface
+  behind it is also dark) is never the only option on hand. Not wired
+  into any component today because the audit above found nothing that
+  needs it — everything that fills with accent already reads white on
+  top, correctly.
+
+  Known, PRE-EXISTING, out-of-scope gap surfaced by this audit, not
+  introduced by it: the Reader's reader-customizable article background
+  (task #364's colour wheel) can be set to any hex, including near-black,
+  and the fixed `text-accent` kicker/source-badge/citation-hover chrome
+  rendered inside that same `<article>` was ALREADY below AA against a
+  very dark custom choice under the old #004aad (e.g. ~2.1-2.6:1 against
+  near-black shades — already failing) and is numerically lower still
+  under #002147 (~1.1-1.3:1) — but this was never a passing case either
+  way, so this change doesn't turn a pass into a fail. A real fix needs
+  logic, not a token (e.g. swap that chrome to `--color-ink` or
+  `--color-accent-on-dark` whenever the article's own custom background
+  reads dark) — flagged as a follow-up, not attempted here.
 
   Deliberately NOT ported yet (unused until the Reader ships in a later
   increment): the swatch tint palette, --font-arabic-naskh. Add then.
 */
 @theme {
   --color-cream: #f5efe2;
+  /* Task #350 (2026-09-08) — the page-CANVAS background, deliberately
+     a SEPARATE variable from --color-cream above, not a repoint of it.
+     --color-cream is a live Tailwind theme variable already consumed
+     by ~30 unrelated `bg-cream` chrome usages app-wide (chips, the
+     sticky header, toggle tracks, typeface pills) with NO contrast
+     safeguard against an arbitrary hue — repointing it directly would
+     silently recolor all of those too. This variable is read by
+     nothing except the `body` rule below; App.tsx's root effect is the
+     only thing that ever overrides it (via
+     `document.documentElement.style.setProperty`), reading the
+     persisted choice from hooks/usePageBackgroundPreference.ts. Same
+     starting hex as --color-cream so a reader who never touches the
+     new control sees zero visual change. */
+  --color-page-bg: #f5efe2;
   --color-card: #fbf8f0;
   --color-ink: #37312b;
   --color-ink-muted: #6b6055;
-  --color-accent: #004aad;
-  --color-accent-hover: #0060e0;
-  --color-accent-active: #004096;
-  --color-accent-darker: #003a87;
+  --color-accent: #002147;
+  --color-accent-hover: #00397a;
+  --color-accent-active: #001630;
+  --color-accent-darker: #000f21;
   --color-accent-ink: #ffffff;
   --color-accent-tint: #f3f3f4;
+  /* Precautionary — see this block's own header comment above ("--color-
+     accent-on-dark") for what this is and why it exists unconsumed. */
+  --color-accent-on-dark: #248aff;
   --color-line: #eae0cb;
   --color-line-strong: #947e52;
 
@@ -206,7 +275,11 @@
 
 @layer base {
   body {
-    background-color: var(--color-cream);
+    /* Task #350 — was `var(--color-cream)`. Now its own variable (see
+       the @theme block above for why) so the global background-colour
+       control can repaint the page canvas everywhere without also
+       repainting unrelated `bg-cream` chrome. */
+    background-color: var(--color-page-bg);
     color: var(--color-ink);
   }
 

@@ -1,0 +1,272 @@
+@import "tailwindcss";
+
+/* OpenDyslexic — self-hosted (SIL Open Font License), NOT loaded from
+   Google Fonts (it isn't on Google Fonts) or any third-party CDN. The
+   @fontsource/opendyslexic package bundles the official woff2/woff
+   files + LICENSE straight into node_modules; Vite/postcss-import
+   resolves this the same way it resolves a JS package import, so the
+   files ship from Nibras's own build output. Regular + Bold only (no
+   italic — not used for body reading). License:
+   node_modules/@fontsource/opendyslexic/LICENSE */
+@import "@fontsource/opendyslexic/latin.css";
+
+/* Google Fonts — self-hosted via @fontsource/* (2026-08-14, pre-pilot
+   fix batch, webrev P1 — makes the "we don't call third parties"
+   privacy promise actually true). Previously index.html <link>ed the
+   Google Fonts CDN directly (not naming its own hostname here — see
+   index.html's own comment for why) — a plain page load leaked the
+   visitor's IP to Google before any in-app feature was ever touched,
+   the exact kind of undisclosed third-party call this app's own
+   Privacy page promises doesn't happen. Same pattern as
+   OpenDyslexic above: the npm package bundles the official woff2/woff
+   files straight into node_modules, Vite/postcss-import resolves it
+   the same way it resolves a JS import, so every family now ships from
+   Nibras's own build output — zero third-party requests. Same 8
+   families + the EXACT SAME weights the removed index.html <link>
+   requested (verified against the old query string, not re-decided
+   here): Lexend (default Latin reading typeface) + Atkinson
+   Hyperlegible + Open Sans + Lora (the rest of the Latin picker).
+   Tajawal = Arabic UI/brand chrome font only (not a reading option,
+   per Amal). Noto Naskh Arabic + IBM Plex Sans Arabic + Reem Kufi = the
+   Arabic reading-typeface picker. Explicit PER-WEIGHT imports (never
+   the blanket `<subset>.css`, which bundles every weight Fontsource
+   ships for that family, e.g. Lexend goes up to 900 — this app only
+   ever uses 400-700) so the shipped weight list stays exactly,
+   auditably 1:1 with what's actually used. Both latin+arabic subsets
+   imported for every family that ships both (even ones mainly used for
+   one script) so no character that used to render via Google's own
+   automatic subset negotiation can silently fall back to a system font
+   — this costs nothing extra at runtime, since a browser only fetches
+   a given subset's woff2 the first time it actually needs to render a
+   character inside that subset's unicode-range. */
+@import "@fontsource/lexend/latin-400.css";
+@import "@fontsource/lexend/latin-500.css";
+@import "@fontsource/lexend/latin-600.css";
+@import "@fontsource/lexend/latin-700.css";
+@import "@fontsource/tajawal/latin-400.css";
+@import "@fontsource/tajawal/latin-500.css";
+@import "@fontsource/tajawal/latin-700.css";
+@import "@fontsource/tajawal/arabic-400.css";
+@import "@fontsource/tajawal/arabic-500.css";
+@import "@fontsource/tajawal/arabic-700.css";
+@import "@fontsource/atkinson-hyperlegible/latin-400.css";
+@import "@fontsource/atkinson-hyperlegible/latin-700.css";
+@import "@fontsource/open-sans/latin-400.css";
+@import "@fontsource/open-sans/latin-500.css";
+@import "@fontsource/open-sans/latin-600.css";
+@import "@fontsource/open-sans/latin-700.css";
+@import "@fontsource/lora/latin-400.css";
+@import "@fontsource/lora/latin-500.css";
+@import "@fontsource/lora/latin-600.css";
+@import "@fontsource/lora/latin-700.css";
+@import "@fontsource/noto-naskh-arabic/latin-400.css";
+@import "@fontsource/noto-naskh-arabic/latin-700.css";
+@import "@fontsource/noto-naskh-arabic/arabic-400.css";
+@import "@fontsource/noto-naskh-arabic/arabic-700.css";
+@import "@fontsource/ibm-plex-sans-arabic/latin-400.css";
+@import "@fontsource/ibm-plex-sans-arabic/latin-500.css";
+@import "@fontsource/ibm-plex-sans-arabic/latin-600.css";
+@import "@fontsource/ibm-plex-sans-arabic/latin-700.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-400.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-500.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-600.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-700.css";
+@import "@fontsource/reem-kufi/latin-400.css";
+@import "@fontsource/reem-kufi/latin-500.css";
+@import "@fontsource/reem-kufi/latin-600.css";
+@import "@fontsource/reem-kufi/latin-700.css";
+@import "@fontsource/reem-kufi/arabic-400.css";
+@import "@fontsource/reem-kufi/arabic-500.css";
+@import "@fontsource/reem-kufi/arabic-600.css";
+@import "@fontsource/reem-kufi/arabic-700.css";
+
+/*
+  Design tokens ported from the approved static mockup
+  (~/Desktop/AI/research/nibras/design/mockups/mockup.css).
+  Contrast re-verified against that same palette (WCAG 2.2 AA, relative
+  luminance script, not eyeballed):
+    ink #37312B on card #FBF8F0   -> 12.09:1
+    ink #37312B on cream #F5EFE2  -> 11.20:1
+    ink-muted #6B6055 on cream    -> 5.34:1
+    line-strong #947E52 on card   -> 3.34–3.69:1 (WCAG 1.4.11 UI-component floor)
+
+  Accent = Nibras brand blue #004aad (Amal's original منصة نبراس brand
+  deck, swapped from the interim Oxford blue #002147 2026-08-12).
+  Sampled — not eyeballed — via a canvas pixel read of the deck's own
+  rendered pages (research/nibras/_pdftmp/nibras-brand-page-{1,5,8}.png):
+  6 independent regions (2 solid-fill shapes on page 1, the page-1
+  wordmark stroke, 2 solid-fill rectangles on page 8, the page-5
+  heading stroke) all agreed on the exact same #004aad, taking each
+  region's modal pixel color to reject anti-aliased edge noise. Only
+  the accent changed — cream/card/ink/line above are untouched.
+  #004aad -> HSL(214.3°, 100%, 33.9%) — same hue family as the interim
+  Oxford blue (212°) but notably lighter/brighter. accent-hover/-active/
+  -darker are the same hue+saturation at different lightness steps
+  (+10%/-4.5%/-7.5% L), same method as the Oxford-blue swap; accent-tint
+  reuses the OLD tint's own (S≈4.75%, L≈95.5%) recipe with the new hue —
+  that recipe's job is "match the old tint's whisper-subtlety," not
+  derive a fresh cap, confirmed still ~1.0:1 bg-vs-bg against the page
+  (was ~1.03:1 before, is 1.033:1 now — no regression). Contrast
+  RE-VERIFIED because this blue is brighter than Oxford blue (team-lead
+  flagged this explicitly) — passes AA with real margin regardless:
+    white on accent (button)         -> 8.13:1
+    white on accent-hover            -> 5.60:1  (lowest margin — hover-only, transient)
+    white on accent-active           -> 9.66:1
+    accent as text/link on cream     -> 7.10:1
+    accent as text/link on card      -> 7.66:1
+    accent as text on accent-tint (badges) -> 7.33:1
+  All clear WCAG AA's 4.5:1 (most clear AAA's 7:1 too) — no separate
+  darker "text-only" variant was needed.
+
+  Deliberately NOT ported yet (unused until the Reader ships in a later
+  increment): the swatch tint palette, --font-arabic-naskh. Add then.
+*/
+@theme {
+  --color-cream: #f5efe2;
+  /* Task #350 (2026-09-08) — the page-CANVAS background, deliberately
+     a SEPARATE variable from --color-cream above, not a repoint of it.
+     --color-cream is a live Tailwind theme variable already consumed
+     by ~30 unrelated `bg-cream` chrome usages app-wide (chips, the
+     sticky header, toggle tracks, typeface pills) with NO contrast
+     safeguard against an arbitrary hue — repointing it directly would
+     silently recolor all of those too. This variable is read by
+     nothing except the `body` rule below; App.tsx's root effect is the
+     only thing that ever overrides it (via
+     `document.documentElement.style.setProperty`), reading the
+     persisted choice from hooks/usePageBackgroundPreference.ts. Same
+     starting hex as --color-cream so a reader who never touches the
+     new control sees zero visual change. */
+  --color-page-bg: #f5efe2;
+  --color-card: #fbf8f0;
+  --color-ink: #37312b;
+  --color-ink-muted: #6b6055;
+  --color-accent: #004aad;
+  --color-accent-hover: #0060e0;
+  --color-accent-active: #004096;
+  --color-accent-darker: #003a87;
+  --color-accent-ink: #ffffff;
+  --color-accent-tint: #f3f3f4;
+  --color-line: #eae0cb;
+  --color-line-strong: #947e52;
+
+  --font-sans: 'Lexend', system-ui, -apple-system, sans-serif;
+  --font-arabic: 'Tajawal', system-ui, sans-serif;
+
+  --radius-card: 16px;
+  --radius-control: 10px;
+  --radius-lg: 12px; /* input row, large CTA button */
+
+  --shadow-warm: 0 10px 28px -14px rgb(55 49 43 / 0.22);
+
+  /* Usage-guide illustrations (pages/Guide.tsx) — small, calm entrance
+     animations, always used behind Tailwind's `motion-safe:` variant so
+     a `prefers-reduced-motion: reduce` visitor gets the same elements
+     at their final resting state (opacity 1, no offset) with zero
+     motion, never a stuck-invisible one: the "from" keyframe state
+     only ever applies while `motion-safe:animate-*` itself applies, and
+     each element's own base (non-animated) classes already render the
+     fully-settled look. `both` keeps the "to" state after finishing,
+     rather than snapping back. Per-use `animation-delay` (for a
+     staggered secondary element) is set inline at each call site, not
+     baked in here, so different flourishes can stagger differently. */
+  --animate-guide-fade-scale: guide-fade-scale 0.5s ease-out both;
+  --animate-guide-reveal: guide-reveal 0.5s ease-out both;
+  --animate-guide-pulse-ring: guide-pulse-ring 1.1s ease-out both;
+  --animate-guide-sweep: guide-sweep 0.7s ease-out both;
+}
+
+@keyframes guide-fade-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes guide-reveal {
+  /* --guide-reveal-x lets a caller flip the entrance side (e.g. for
+     RTL) without a second keyframe — set inline per element. */
+  from {
+    opacity: 0;
+    transform: translateX(var(--guide-reveal-x, -8px));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes guide-pulse-ring {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.75);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+@keyframes guide-sweep {
+  from {
+    transform: scaleX(0.35);
+    opacity: 0.6;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@layer base {
+  body {
+    /* Task #350 — was `var(--color-cream)`. Now its own variable (see
+       the @theme block above for why) so the global background-colour
+       control can repaint the page canvas everywhere without also
+       repainting unrelated `bg-cream` chrome. */
+    background-color: var(--color-page-bg);
+    color: var(--color-ink);
+  }
+
+  html[dir='ltr'] body {
+    font-family: var(--font-sans);
+  }
+  html[dir='rtl'] body {
+    font-family: var(--font-arabic);
+  }
+
+  /* Non-negotiable (learning-science-audit F11 / project rule): Arabic
+     is a connected cursive script — added letter-spacing breaks the
+     joins. The universal-selector form is required: "[dir='rtl']"
+     alone only matches <html> itself, and an !important value there
+     does NOT override a descendant's own matching declaration (e.g. a
+     Tailwind `tracking-*` utility on a specific element) — inheriting
+     an !important ancestor value never beats a direct match on the
+     descendant. This form matches every descendant directly, so
+     !important actually wins. (Mechanically verified with an isolated
+     exaggerated-value render — see agent memory patterns_rtl_bilingual.md
+     for the full writeup; browsers separately already refuse to break
+     cursive joins on connected-script runs per CSS Text Module Level 3
+     §7.2.1, but that doesn't cover Latin characters/digits embedded in
+     Arabic-dir text, so this rule still matters.)
+
+     :not([dir='ltr'], [dir='ltr'] *) added 2026-08-13 (nibras-qa P1-1)
+     — the plain "[dir='rtl'] *" form also matched an explicitly
+     dir="ltr"-marked descendant (and ITS OWN descendants), which this
+     app genuinely has: the Reader's reading paragraph carries
+     dir={isContentArabic ? 'rtl' : 'ltr'} independent of the UI
+     language (Reader.tsx) — an English DOCUMENT read with the Arabic
+     UI active is real, common usage, not an edge case. That English
+     text's own Letter spacing reading-setting was being silently
+     zeroed by this rule even though it never should have applied
+     there — Arabic script is what must never get letter-spacing, not
+     "any text anywhere inside an RTL-language UI shell". The :not()
+     exclusion carves out any subtree that has opted back into LTR via
+     its own explicit dir attribute, letting that content's real
+     letter-spacing setting take effect again while Arabic script
+     (which never sets dir="ltr" on itself) stays fully protected. */
+  [dir='rtl'],
+  [dir='rtl'] *:not([dir='ltr'], [dir='ltr'] *) {
+    letter-spacing: normal !important;
+  }
+}

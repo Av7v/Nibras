@@ -1,5 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
+import { BackgroundSettingsControl } from '../components/BackgroundSettingsControl'
+import { MascotLauncher } from '../components/MascotLauncher'
+import { NibrasGuideMascot } from '../components/NibrasGuideMascot'
 import { BrandMarkIcon, ChevronIcon } from '../components/icons'
 import { focusRing, focusRingInset } from '../lib/focus'
 
@@ -31,7 +34,8 @@ import { focusRing, focusRingInset } from '../lib/focus'
  * Privacy already do; Library/Calm Space (now «سُكون»/"Calmness") don't (see the reasoning
  * above), so they were surfaced on the Dashboard instead, not here.
  *
- * #004aad + cream throughout, matching the app-shell exactly. Bilingual
+ * #002147 (Amal's primary as of 2026-09-15, see index.css's own accent
+ * comment) + cream throughout, matching the app-shell exactly. Bilingual
  * + RTL via the same CSS-logical-property/flex patterns as everywhere
  * else in this app — no manual mirroring needed anywhere on this page.
  */
@@ -39,7 +43,13 @@ export function Landing() {
   const { t, i18n } = useTranslation()
 
   return (
-    <div className="flex min-h-svh flex-col bg-cream">
+    // Task #350: was `bg-cream` here. Dropped deliberately — this div
+    // used to paint its OWN opaque cream regardless of the page-canvas
+    // preference, so it silently overrode the global background-colour
+    // choice on this one route. Now transparent, same as every other
+    // page's own root element, so `body`'s `--color-page-bg` (set by
+    // App.tsx's root effect) shows through here too.
+    <div className="flex min-h-svh flex-col">
       {/* Skip link — finishes an i18n key (landing.skipToCta) that
           existed before this page had any header content to skip past;
           points straight at the CTA's own id, which (being a real
@@ -52,7 +62,14 @@ export function Landing() {
         {t('landing.skipToCta')}
       </a>
 
-      <header className="flex justify-end px-6 py-5 sm:px-10">
+      <header className="flex items-center justify-end gap-3 px-6 py-5 sm:px-10">
+        {/* Task #350 — the SAME global background-colour control as
+            AppShellHeader.tsx's own copy, reading/writing the SAME live
+            store (usePageBackgroundPreference). Landing needs its own
+            instance because it deliberately lives outside AppShell
+            (see this file's own header comment), so it never shares
+            AppShellHeader's markup. */}
+        <BackgroundSettingsControl />
         <div
           role="group"
           aria-label={t('header.languageLabel')}
@@ -140,6 +157,15 @@ export function Landing() {
           </ul>
         </nav>
       </main>
+
+      {/* «مرشد نبراس» (task #369, Amal 2026-09-14): on the Landing page the
+          guide FLOATS at the inline-start bottom corner (mirrors correctly:
+          bottom-right in Arabic, bottom-left in English). Its chat popup
+          floats from the same root. On app pages the launcher is docked in
+          the sidebar instead (AppShellSidebar) and the popup is mounted in
+          AppShell. */}
+      <MascotLauncher variant="floating" />
+      <NibrasGuideMascot variant="landing" />
     </div>
   )
 }

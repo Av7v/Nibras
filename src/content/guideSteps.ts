@@ -10,7 +10,7 @@ import type { GuideFlourish } from '../components/guide/GuideIllustration'
  *
  * Chapter titles deliberately REUSE existing i18n keys (the same
  * feature name shown everywhere else in the app — reader.kicker,
- * settings.title, etc.) rather than new guide-specific ones, so the
+ * library.title, etc.) rather than new guide-specific ones, so the
  * guide never risks drifting out of sync with what a feature is
  * actually called elsewhere. Step copy is new (guide.* namespace),
  * written short and concrete — describes exactly what's actually
@@ -39,7 +39,7 @@ export interface GuideStep {
 // into a compile-time error instead — tsc -b refuses to build once a
 // new id is added here until guideIcons.tsx is also updated, so this
 // specific bug class can't happen again silently.
-export type GuideChapterId = 'reader' | 'settings' | 'techniques' | 'readingBuddy' | 'mindMaps' | 'letterSounds' | 'aiAssistant' | 'library' | 'calmSpace'
+export type GuideChapterId = 'colours' | 'techniques' | 'reader' | 'readingBuddy' | 'mindMaps' | 'letterSounds' | 'aiAssistant' | 'library' | 'calmSpace' | 'guideMascot'
 
 export interface GuideChapter {
   id: GuideChapterId
@@ -49,19 +49,11 @@ export interface GuideChapter {
 
 export const GUIDE_CHAPTERS: GuideChapter[] = [
   {
-    id: 'reader',
-    titleKey: 'reader.kicker',
+    id: 'colours',
+    titleKey: 'guide.coloursTitle',
     steps: [
-      { titleKey: 'guide.readerStep1Title', bodyKey: 'guide.readerStep1Body', flourish: 'reveal' },
-      { titleKey: 'guide.readerStep2Title', bodyKey: 'guide.readerStep2Body', flourish: 'sweep' },
-    ],
-  },
-  {
-    id: 'settings',
-    titleKey: 'settings.title',
-    steps: [
-      { titleKey: 'guide.settingsStep1Title', bodyKey: 'guide.settingsStep1Body', flourish: 'sweep' },
-      { titleKey: 'guide.settingsStep2Title', bodyKey: 'guide.settingsStep2Body', flourish: 'pulse' },
+      { titleKey: 'guide.coloursStep1Title', bodyKey: 'guide.coloursStep1Body', flourish: 'reveal' },
+      { titleKey: 'guide.coloursStep2Title', bodyKey: 'guide.coloursStep2Body', flourish: 'pulse' },
     ],
   },
   {
@@ -70,6 +62,40 @@ export const GUIDE_CHAPTERS: GuideChapter[] = [
     steps: [
       { titleKey: 'guide.techniquesStep1Title', bodyKey: 'guide.techniquesStep1Body', flourish: 'reveal' },
       { titleKey: 'guide.techniquesStep2Title', bodyKey: 'guide.techniquesStep2Body', flourish: 'pulse' },
+    ],
+  },
+  {
+    id: 'reader',
+    titleKey: 'reader.kicker',
+    steps: [
+      { titleKey: 'guide.readerStep1Title', bodyKey: 'guide.readerStep1Body', flourish: 'reveal' },
+      { titleKey: 'guide.readerStep2Title', bodyKey: 'guide.readerStep2Body', flourish: 'sweep' },
+    ],
+  },
+  // Added 2026-08-13 (nibras-qa P1-4) — Library and «سُكون»/Calmness
+  // both shipped after this guide's original 6 chapters were written.
+  // Same honesty discipline as every other chapter here, re-flagged by
+  // team-lead specifically for these two: «سُكون»'s copy makes no
+  // benefit/treatment claim and explicitly says nothing is saved (it
+  // really isn't — see CalmSpace.tsx's own comment), matching
+  // calm.subtitle's own "before or during reading" register rather
+  // than inventing new framing. (Library shipped the same day for the
+  // same reason — see its own chapter further down this array, moved
+  // apart from this one by the 2026-09-17 chapter reorder.)
+  {
+    id: 'calmSpace',
+    titleKey: 'calm.title',
+    steps: [
+      { titleKey: 'guide.calmSpaceStep1Title', bodyKey: 'guide.calmSpaceStep1Body', flourish: 'pulse' },
+      { titleKey: 'guide.calmSpaceStep2Title', bodyKey: 'guide.calmSpaceStep2Body', flourish: 'reveal' },
+    ],
+  },
+  {
+    id: 'aiAssistant',
+    titleKey: 'aiAssistant.title',
+    steps: [
+      { titleKey: 'guide.aiAssistantStep1Title', bodyKey: 'guide.aiAssistantStep1Body', flourish: 'reveal' },
+      { titleKey: 'guide.aiAssistantStep2Title', bodyKey: 'guide.aiAssistantStep2Body', flourish: 'pulse' },
     ],
   },
   {
@@ -96,26 +122,12 @@ export const GUIDE_CHAPTERS: GuideChapter[] = [
       { titleKey: 'guide.letterSoundsStep2Title', bodyKey: 'guide.letterSoundsStep2Body', flourish: 'pulse' },
     ],
   },
-  {
-    id: 'aiAssistant',
-    titleKey: 'aiAssistant.title',
-    steps: [
-      { titleKey: 'guide.aiAssistantStep1Title', bodyKey: 'guide.aiAssistantStep1Body', flourish: 'reveal' },
-      { titleKey: 'guide.aiAssistantStep2Title', bodyKey: 'guide.aiAssistantStep2Body', flourish: 'pulse' },
-    ],
-  },
-  // Added 2026-08-13 (nibras-qa P1-4) — Library and «سُكون»/Calmness
-  // both shipped after this guide's original 6 chapters were written.
-  // Same honesty discipline as every other chapter here, re-flagged by
-  // team-lead specifically for these two: Library's copy describes the
-  // ACTION (open/organize), never a permanence guarantee — P1-7 (the
-  // 10-document cap silently pruning the oldest book) is still open,
-  // so "everything you save stays here" would be a NEW false claim
-  // layered on an already-known one. «سُكون»'s copy makes no benefit/
-  // treatment claim and explicitly says nothing is saved (it really
-  // isn't — see CalmSpace.tsx's own comment), matching calm.subtitle's
-  // own "before or during reading" register rather than inventing new
-  // framing.
+  // Library shipped alongside «سُكون»/Calmness on 2026-08-13 — see the
+  // comment above the calmSpace chapter for the shared context. Its
+  // own copy describes the ACTION (open/organize), never a permanence
+  // guarantee — P1-7 (the 10-document cap silently pruning the oldest
+  // book) is still open, so "everything you save stays here" would be
+  // a NEW false claim layered on an already-known one.
   {
     id: 'library',
     titleKey: 'library.title',
@@ -125,11 +137,11 @@ export const GUIDE_CHAPTERS: GuideChapter[] = [
     ],
   },
   {
-    id: 'calmSpace',
-    titleKey: 'calm.title',
+    id: 'guideMascot',
+    titleKey: 'mascot.name',
     steps: [
-      { titleKey: 'guide.calmSpaceStep1Title', bodyKey: 'guide.calmSpaceStep1Body', flourish: 'pulse' },
-      { titleKey: 'guide.calmSpaceStep2Title', bodyKey: 'guide.calmSpaceStep2Body', flourish: 'reveal' },
+      { titleKey: 'guide.guideMascotStep1Title', bodyKey: 'guide.guideMascotStep1Body', flourish: 'reveal' },
+      { titleKey: 'guide.guideMascotStep2Title', bodyKey: 'guide.guideMascotStep2Body', flourish: 'pulse' },
     ],
   },
 ]

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
-import { getTechniqueById, buildTtsText, type EvidenceLevel, type TechniqueCategory } from '../content/techniques'
+import { getTechniqueById, buildTtsText, type TechniqueCategory } from '../content/techniques'
 import { SpeakerButton } from '../components/techniques/SpeakerButton'
 import { SpeedField, VoiceGenderField } from '../components/VoiceControls'
 import { ChevronIcon } from '../components/icons'
@@ -15,12 +15,6 @@ const CATEGORY_LABEL_KEY: Record<TechniqueCategory, string> = {
   comprehension: 'techniques.categoryComprehension',
   focus: 'techniques.categoryFocus',
 }
-const EVIDENCE_LABEL_KEY: Record<EvidenceLevel, string> = {
-  'well-established': 'techniques.evidenceWellEstablished',
-  promising: 'techniques.evidencePromising',
-  weak: 'techniques.evidenceWeak',
-}
-
 /**
  * Full detail for one technique: how-to steps, why it helps, and its
  * source — plus the same read-aloud control as the grid card. Its own
@@ -71,9 +65,6 @@ export function TechniqueDetail() {
       <div className="mb-4 flex items-center gap-2.5">
         <span className="inline-flex items-center rounded-control bg-accent-tint px-2.5 py-1 text-[0.75rem] font-semibold text-accent">
           {t(CATEGORY_LABEL_KEY[technique.category])}
-        </span>
-        <span className="inline-flex items-center rounded-control border border-line-strong px-2.5 py-1 text-[0.75rem] font-semibold text-ink-muted">
-          {t(EVIDENCE_LABEL_KEY[technique.evidence])}
         </span>
       </div>
 
@@ -133,9 +124,6 @@ export function TechniqueDetail() {
           {t('techniques.whyItHelpsTitle')}
         </h2>
         <p className="mb-3 text-[0.9375rem] leading-relaxed text-ink">{copy.whyItHelps}</p>
-        {copy.evidenceNote && (
-          <p className="mb-3 text-[0.8125rem] leading-relaxed text-ink-muted italic">{copy.evidenceNote}</p>
-        )}
         <p className="m-0 text-[0.8125rem] leading-relaxed text-ink-muted">
           <strong className="font-semibold text-ink">{t('techniques.sourceLabel')}:</strong> {copy.source}
         </p>

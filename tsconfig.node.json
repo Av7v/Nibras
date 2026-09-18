@@ -40,6 +40,8 @@
     "server/api/summarize.ts",
     "server/api/explain.ts",
     "server/api/translate.ts",
+    "server/api/ask.ts",
+    "server/api/_askContext.ts",
     "server/api/_accessControl.ts",
     "server/api/_rateLimiter.ts",
     "server/api/_spendCap.ts"

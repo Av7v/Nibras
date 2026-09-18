@@ -63,8 +63,25 @@ export function useSpeakingController() {
    * shared persisted preference; callers that pass nothing (Guide,
    * Privacy) fall back to the SAME global preference for the neural
    * path (so the whole app speaks in one consistent voice) and to
-   * speak()'s own defaults for the browser path. */
-  async function toggle(id: string, text: string, lang: SpeechLang, opts?: { gender?: VoiceGender; rate?: number }) {
+   * speak()'s own defaults for the browser path.
+   *
+   * `opts.onBoundary`/`opts.onAudio` (task #366) — optional voice-signal
+   * taps for «مرشد نبراس»'s talking mouth, and INERT for every other
+   * caller (they pass neither): `onBoundary` is forwarded to speak()'s
+   * per-word boundary on the browser path; `onAudio` hands the neural
+   * <audio> element to the caller right before it plays, so it can wire
+   * an AnalyserNode for amplitude. Neither changes playback in any way. */
+  async function toggle(
+    id: string,
+    text: string,
+    lang: SpeechLang,
+    opts?: {
+      gender?: VoiceGender
+      rate?: number
+      onBoundary?: (charIndex: number, charLength?: number) => void
+      onAudio?: (audio: HTMLAudioElement) => void
+    },
+  ) {
     if (speakingId === id || preparingId === id) {
       stop()
       return
@@ -107,6 +124,16 @@ export function useSpeakingController() {
         audio.playbackRate = opts?.rate ?? 1 // speed applied ONCE (server rendered at 1x)
         audio.onended = () => clearCurrent(id)
         audio.onerror = () => clearCurrent(id)
+        // #366: hand the element to the mascot BEFORE play() so its
+        // AnalyserNode is wired before the first samples flow. The data:
+        // URL is same-origin, so the analyser reads real amplitude (not
+        // CORS-tainted zeros). No-op for every other caller. Guarded so a
+        // throw in the tap can never stop the voice from playing.
+        try {
+          opts?.onAudio?.(audio)
+        } catch {
+          /* mouth is cosmetic — never let it break playback */
+        }
         try {
           await audio.play()
           if (myGen !== genRef.current) return
@@ -130,6 +157,7 @@ export function useSpeakingController() {
       rate: opts?.rate,
       onEnd: () => clearCurrent(id),
       onError: () => clearCurrent(id),
+      onBoundary: opts?.onBoundary, // #366 mascot mouth-sync; undefined for every other caller
     })
     if (myGen === genRef.current) setSpeakingId(started ? id : null)
   }

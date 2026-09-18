@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, typ
 import { RULER_COLORS, TINTS, type RulerColor, type Tint } from '../../lib/readingSettings'
 import { hexToHsl, hslToHex, normalizeHex } from '../../lib/color'
 import { contrastRatio, WCAG_AA_BODY_TEXT_RATIO } from '../../lib/contrast'
+import { isolateLtr } from '../../lib/bidi'
 import { InfoIcon } from '../icons'
 
 /** Reusable "label + range slider + live value" row. Used for text
@@ -179,6 +180,61 @@ export function TypefaceField<T extends string>({
   )
 }
 
+export interface ChoiceOption<T extends string> {
+  value: T
+  label: string
+  description?: string
+}
+
+/** Generic radio "cards" for a small closed set of choices that each
+ * need a short description, not just a label — same peer-radio idiom
+ * as TypefaceField above, but plain text (no font sample/swatch).
+ * First use: the Reading Ruler's mode picker (task #361, line vs
+ * word-by-word). The peer-checked colour change lives on the OUTER
+ * span (the input's actual sibling — Tailwind's `peer-checked:` only
+ * ever matches a direct sibling of the `.peer` element, never a
+ * grandchild), and the label text inherits it for free since `color`
+ * cascades; the description underneath sets its OWN muted colour so it
+ * deliberately never follows the label's accent colour, same as
+ * ToggleField's description always staying muted regardless of
+ * checked. */
+export function ChoiceField<T extends string>({
+  legend,
+  name,
+  options,
+  value,
+  onChange,
+}: {
+  legend: string
+  name: string
+  options: ChoiceOption<T>[]
+  value: T
+  onChange: (value: T) => void
+}) {
+  return (
+    <fieldset className="mb-5">
+      <legend className="mb-2 text-sm font-semibold text-ink">{legend}</legend>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => (
+          <label key={opt.value} className="inline-flex min-w-[150px] flex-1 cursor-pointer">
+            <input
+              type="radio"
+              name={name}
+              className="peer sr-only"
+              checked={value === opt.value}
+              onChange={() => onChange(opt.value)}
+            />
+            <span className="block w-full rounded-control border-[1.5px] border-line-strong bg-cream px-3.5 py-2.5 text-start text-ink peer-checked:border-accent peer-checked:bg-accent-tint peer-checked:text-accent peer-focus-visible:outline-[3px] peer-focus-visible:outline-accent peer-focus-visible:outline-offset-[3px]">
+              <span className="block text-sm font-medium">{opt.label}</span>
+              {opt.description && <span className="mt-0.5 block text-[0.75rem] text-ink-muted">{opt.description}</span>}
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
 const TINT_ORDER: Tint[] = ['cream', 'blue', 'green', 'rose', 'white']
 
 /** Custom radio "swatches" for background tint. */
@@ -189,6 +245,7 @@ export function TintField({
   onChange,
   caption,
   tintLabels,
+  active = true,
 }: {
   legend: string
   name: string
@@ -196,6 +253,14 @@ export function TintField({
   onChange: (value: Tint) => void
   caption: string
   tintLabels: Record<Tint, string>
+  /** When false, NO swatch shows as selected — used by the Reader's
+   * background control (task #364) once a free custom colour (from the
+   * new colour wheel below the swatches) is active, so a preset and a
+   * custom colour are never both shown as "chosen" at once. Clicking a
+   * swatch still fires onChange (the parent clears the custom override),
+   * which flips this back to true. Defaults true → unchanged everywhere
+   * that doesn't pass it. */
+  active?: boolean
 }) {
   return (
     <fieldset className="mb-5">
@@ -207,7 +272,7 @@ export function TintField({
               type="radio"
               name={name}
               className="peer sr-only"
-              checked={value === key}
+              checked={active && value === key}
               onChange={() => onChange(key)}
             />
             <span
@@ -361,6 +426,7 @@ export function ColorWheelField({
   contrastWarningLabel,
   sampleText,
   idPrefix,
+  valueIsBackground = false,
 }: {
   legend: string
   caption?: string
@@ -386,6 +452,15 @@ export function ColorWheelField({
    * colour is per-script, like tint already is) — element ids must be
    * unique across both or the two `<label htmlFor>` pairs collide. */
   idPrefix: string
+  /** Task #364: when true, `value` is a BACKGROUND colour (the reader's
+   * reading-panel background, or a mind-map's canvas) and `backgroundHex`
+   * is the FOREGROUND it's checked against (the text/ink). Flips ONLY the
+   * little preview swatch so it always shows foreground-on-background
+   * truthfully; the contrast RATIO is order-independent so the number and
+   * the pass/warn logic are identical either way. Defaults false → the
+   * original text-colour behaviour (value = the text, backgroundHex = the
+   * surface behind it) is unchanged. */
+  valueIsBackground?: boolean
 }) {
   const wheelRef = useRef<HTMLDivElement | null>(null)
   const isDraggingRef = useRef(false)
@@ -488,7 +563,7 @@ export function ColorWheelField({
               live-updating aria-label + real arrow-key handling. */}
           <div
             tabIndex={0}
-            aria-label={wheelAriaLabel(value)}
+            aria-label={wheelAriaLabel(isolateLtr(value))}
             onKeyDown={handlePuckKeyDown}
             className="absolute rounded-full border-2 border-white shadow-[0_0_0_1.5px_rgba(0,0,0,0.35)] focus-visible:outline-[3px] focus-visible:outline-accent focus-visible:outline-offset-2"
             style={{
@@ -519,6 +594,7 @@ export function ColorWheelField({
           <input
             id={`${idPrefix}-hex`}
             type="text"
+            dir="ltr"
             value={hexDraft}
             onChange={(e) => {
               setHexDraft(e.target.value)
@@ -538,14 +614,14 @@ export function ColorWheelField({
           <div aria-live="polite" className="flex items-center gap-2.5 rounded-control border border-line bg-cream px-3 py-2">
             <span
               aria-hidden="true"
-              style={{ color: value, background: backgroundHex }}
+              style={valueIsBackground ? { color: backgroundHex, background: value } : { color: value, background: backgroundHex }}
               className="flex size-9 flex-none items-center justify-center rounded-control text-base font-bold"
             >
               {sampleText}
             </span>
             <div className="min-w-0">
               <span className="sr-only">{previewLabel}</span>
-              <p className="m-0 text-[0.8125rem] font-semibold text-ink">{formatContrastLabel(ratio.toFixed(1))}</p>
+              <p className="m-0 text-[0.8125rem] font-semibold text-ink">{formatContrastLabel(isolateLtr(`${ratio.toFixed(1)}:1`))}</p>
               <p className="m-0 mt-0.5 flex items-start gap-1 text-[0.8125rem] text-ink-muted">
                 {!passesAA && <InfoIcon className="mt-0.5 size-3.5 flex-none text-accent" />}
                 {passesAA ? contrastGoodLabel : contrastWarningLabel}

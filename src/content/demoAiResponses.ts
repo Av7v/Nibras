@@ -35,9 +35,9 @@ export const DEMO_AI_RESPONSES: DemoAiResponse[] = [
     exampleId: 'reading',
     lang: 'en',
     summary:
-      'A reflection on reading as light and an open door: each page widens your world, and its real beauty is found by savoring every word rather than hurrying through it.',
+      'A reflection on reading as light and an open door: each page widens your world, and its real beauty is found by savouring every word rather than hurrying through it.',
     explanation:
-      "This passage describes reading as a light for the mind and a door to endless worlds for the soul, one that widens your view of things with every page you turn. It treats patience, savoring each word rather than rushing to the end, as the source of that beauty. The main idea: reading with love and unhurried attention is what lets a passage's own radiance carry you further than you expected.",
+      "This passage describes reading as a light for the mind and a door to endless worlds for the soul, one that widens your view of things with every page you turn. It treats patience, savouring each word rather than rushing to the end, as the source of that beauty. The main idea: reading with love and unhurried attention is what lets a passage's own radiance carry you further than you expected.",
   },
   // Task #231 (2026-08-19): the OLD 'simple-lesson' AR entry (for the
   // old «درس بسيط» passage) is deliberately DELETED, not renamed —

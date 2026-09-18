@@ -554,6 +554,9 @@ export function ReadingBuddy() {
                 // wrong now: the surrounding passage BOX is `bg-cream`,
                 // not `bg-accent-tint`, but a future accent-tint reader
                 // would still contrast poorly against ink text either way.
+                // (2026-09-15: accent moved to #002147 — white-on-accent
+                // is now 16.05:1, even further from accent-tint's own
+                // near-white, so this reasoning only gets stronger.)
                 const confirmed = i < matchedCount
                 const tentative = !confirmed && i < liveIndex
                 return (

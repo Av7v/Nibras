@@ -1,0 +1,19 @@
+WEBVTT
+
+STYLE
+::cue { background-color: rgba(247,241,227,0.92); color:#28241E; font-family:"Lexend","Atkinson Hyperlegible",sans-serif; line-height:1.4; font-size:140%; font-weight:600; }
+
+00:00:01.000 --> 00:00:03.110
+This is the Nibras guide.
+
+00:00:04.440 --> 00:00:06.416
+It explains each page simply,
+
+00:00:06.446 --> 00:00:08.630
+and reads the explanation aloud.
+
+00:00:09.960 --> 00:00:12.790
+Ask it about this page, and it answers.
+
+00:00:14.120 --> 00:00:16.470
+Your guide, on every page.

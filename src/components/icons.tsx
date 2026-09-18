@@ -751,3 +751,115 @@ export function MicrophoneIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
+
+/** Four outward corner brackets — the universal "fullscreen/focus
+ * mode" glyph (task #360). ONE icon for both directions, like this
+ * app's other toggle buttons (e.g. the Reader's own "Reading settings"
+ * button) — the pressed/unpressed STYLE change plus the button's own
+ * label text carry the state, not a second "contract" glyph. Symmetric
+ * — no RTL mirroring needed. */
+export function FullscreenIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <polyline points="8 4 4 4 4 8" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline points="16 4 20 4 20 8" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline points="4 16 4 20 8 20" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline points="20 16 20 20 16 20" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+/** A camera body with a lens circle — "Read from an image" (OCR,
+ * roadmap placeholder, task #465). A camera reads the same either
+ * direction — not mirrored for RTL, like PersonIcon/SpeakerIcon above. */
+export function CameraIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <path
+        d="M9 5.5 8 7.5H4.5a1 1 0 0 0-1 1V19a1 1 0 0 0 1 1h15a1 1 0 0 0 1-1V8.5a1 1 0 0 0-1-1H16l-1-2H9Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        fill="none"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="13.3" r="3.6" stroke="currentColor" strokeWidth="1.7" fill="none" />
+    </svg>
+  )
+}
+
+/** A chain link — "Read from a link" (URL import, roadmap placeholder,
+ * task #465). Two interlocking loops has no inherent left/right
+ * reading-flow meaning — not mirrored for RTL. */
+export function LinkIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <path
+        d="M10 14 14 10"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M11 7.5 12.6 5.9a3.3 3.3 0 0 1 4.7 4.7L15.7 12.2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M13 16.5 11.4 18.1a3.3 3.3 0 0 1-4.7-4.7L8.3 11.8"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        fill="none"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+/** «مرشد نبراس» / the Nibras voice-guide mascot's face (task #366) — a
+ * simple, friendly robot: a rounded head, two round side "ear" nubs, a
+ * small antenna, dot eyes, and a curved smile — same restrained
+ * stroke-plus-filled-dot style as the rest of this file's icons (e.g.
+ * InfoIcon's filled dot, PersonIcon's plain stroke figure), not a new
+ * illustration language. A face has no inherent left/right
+ * reading-flow meaning — not mirrored for RTL, like NoteIcon/
+ * SpeakerIcon above. */
+export function RobotIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <rect x="2" y="11" width="2.4" height="5" rx="1.2" fill="currentColor" />
+      <rect x="19.6" y="11" width="2.4" height="5" rx="1.2" fill="currentColor" />
+      <line x1="12" y1="7" x2="12" y2="3.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="12" cy="2.6" r="1.3" fill="currentColor" />
+      <rect x="4.5" y="7" width="15" height="13" rx="4.5" stroke="currentColor" strokeWidth="1.8" fill="none" />
+      <circle cx="9.3" cy="13" r="1.35" fill="currentColor" />
+      <circle cx="14.7" cy="13" r="1.35" fill="currentColor" />
+      <path d="M9 16.6c1 .9 5 .9 6 0" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/** نبراس's lantern/beacon — the guide-grid glyph for the «مرشد نبراس»
+ * chapter (task #518, Amal 2026-09-15: «نوحد الهوية البصرية»). That one
+ * tile used to render the colour, animated NibrasGuideFace, which stuck
+ * out beside its flat single-colour line-icon siblings; this replaces it
+ * with a drawn glyph in the exact same restrained language as the rest of
+ * this file — a carry-handle arc, a trapezoid cap, a rounded glass body
+ * on a small flared foot, and a single filled flame. The flame is the
+ * beacon's own light (نبراس means "beacon/lantern/light") and is the one
+ * solid accent, same stroke-plus-filled-shape vocabulary as LightbulbIcon
+ * and PaletteIcon's dots. Amal ruled a lantern, NOT a robot — so this is
+ * deliberately distinct from RobotIcon above. A lantern has no inherent
+ * left/right reading-flow meaning, so it is not mirrored for RTL. */
+export function LanternIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <path d="M9.8 5.3a2.2 2.2 0 0 1 4.4 0" stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinecap="round" />
+      <path d="M9.5 5.3H14.5L16.4 7.5H7.6Z" stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinejoin="round" />
+      <rect x="7.6" y="7.5" width="8.8" height="9.6" rx="2" stroke="currentColor" strokeWidth="1.7" fill="none" />
+      <path d="M9.5 17.1l-.7 2.4h6.4l-.7-2.4" stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 9.7C14 11.86 13.8 13.78 12 14.5C10.2 13.78 10 11.86 12 9.7Z" fill="currentColor" />
+    </svg>
+  )
+}

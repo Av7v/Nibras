@@ -127,7 +127,7 @@ export const PRIVACY_SECTIONS: PrivacySection[] = [
     en: {
       heading: 'What Nibras saves, and where',
       body: [
-        "To make the app work the way you like every time you return, Nibras saves a few things directly in your browser's local storage on your device: your reading preferences (font, size, spacing, background), the documents you've opened (so you can resume where you left off) and any folders you organize them into, any bookmarks or notes you add, and any notes or edits you make to a mind map.",
+        "To make the app work the way you like every time you return, Nibras saves a few things directly in your browser's local storage on your device: your reading preferences (font, size, spacing, background), the documents you've opened (so you can resume where you left off) and any folders you organise them into, any bookmarks or notes you add, and any notes or edits you make to a mind map.",
         "None of this is sent to a server. Nibras doesn't have one. If you use a different device or browser, these won't follow you there automatically, because nothing is stored centrally.",
       ],
     },
@@ -142,15 +142,15 @@ export const PRIVACY_SECTIONS: PrivacySection[] = [
   {
     id: 'files',
     en: {
-      heading: 'Files you open (PDF, EPUB, .txt)',
+      heading: 'Files you open (PDF, EPUB, Word, .txt)',
       body: [
-        'When you open a PDF, EPUB, or plain-text file to read in Nibras, it is read and processed entirely inside your browser, on your own device. The file itself is never uploaded, never leaves your device, and Nibras has no way to see its contents.',
+        'When you open a PDF, EPUB, Word, or plain-text file to read in Nibras, it is read and processed entirely inside your browser, on your own device. The file itself is never uploaded, never leaves your device, and Nibras has no way to see its contents.',
       ],
     },
     ar: {
-      heading: 'الملفات التي تفتحها (PDF أو EPUB أو ملف نصي)',
+      heading: 'الملفات التي تفتحها (PDF أو EPUB أو Word أو ملف نصي)',
       body: [
-        'عند فتح ملف PDF أو EPUB أو نص عادي للقراءة في نبراس، تتم معالجته وقراءته بالكامل داخل متصفحك، على جهازك أنت. لا يُرفَع الملف أبدًا، ولا يغادر جهازك، ولا توجد لدى نبراس أي وسيلة للاطلاع على محتواه.',
+        'عند فتح ملف PDF أو EPUB أو Word أو نص عادي للقراءة في نبراس، تتم معالجته وقراءته بالكامل داخل متصفحك، على جهازك أنت. لا يُرفَع الملف أبدًا، ولا يغادر جهازك، ولا توجد لدى نبراس أي وسيلة للاطلاع على محتواه.',
       ],
     },
   },
@@ -326,8 +326,8 @@ export const PRIVACY_SECTIONS: PrivacySection[] = [
     en: {
       heading: 'AI-powered features, demo today, real AI later',
       body: [
-        'Nibras includes early versions of three AI-powered tools: an AI assistant (summarize/explain), AI-generated mind maps, and the Reading Buddy voice player.',
-        'Today, the assistant and mind maps run in a demo mode. They only work on two built-in example texts, using ready-written responses, not a live AI analyzing your input. Reading Buddy already works on any text, but with your browser\'s own built-in voice rather than a more advanced AI reading voice.',
+        'Nibras includes early versions of three AI-powered tools: an AI assistant (summarise/explain), AI-generated mind maps, and the Reading Buddy voice player.',
+        'Today, the assistant and mind maps run in a demo mode. They only work on two built-in example texts, using ready-written responses, not a live AI analysing your input. Reading Buddy already works on any text, but with your browser\'s own built-in voice rather than a more advanced AI reading voice.',
         'In every case today, nothing about your own reading material is sent to an outside AI service.',
         'When these features are extended to generate real results from your own text, and when a more advanced AI reading voice is added, any text you choose to send for that processing will be handled ephemerally: used only to generate a response, then discarded, never stored, and never used to train AI models. We will update this policy, and disclose it clearly inside the app, before that begins.',
       ],
@@ -357,8 +357,8 @@ export const PRIVACY_SECTIONS: PrivacySection[] = [
     enReal: {
       heading: 'AI-powered features, now using a real AI service',
       body: [
-        'Nibras includes AI-powered tools: an AI assistant (summarize/explain), AI-generated mind maps, automatic translation, and the Reading Buddy voice player. These are now connected to a real AI service, called through our own server. Individual features may still be limited or still under active development even so.',
-        'When you use one of these features, the specific text involved (for example, the passage you asked to be translated, summarized, explained, turned into a mind map, or read aloud) is sent to that AI service in order to generate the response.',
+        'Nibras includes AI-powered tools: an AI assistant (summarise/explain), AI-generated mind maps, automatic translation, and the Reading Buddy voice player. These are now connected to a real AI service, called through our own server. Individual features may still be limited or still under active development even so.',
+        'When you use one of these features, the specific text involved (for example, the passage you asked to be translated, summarised, explained, turned into a mind map, or read aloud) is sent to that AI service in order to generate the response.',
         'That text is handled ephemerally: used only to generate the response you asked for, then discarded, and never used to train AI models. Nibras itself still has no account system and no database of its own. This only happens at the moment you actively use one of these features, and only for the text involved in that one request.',
       ],
     },

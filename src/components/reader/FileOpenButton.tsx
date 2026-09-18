@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { parseFile, type ParsedFile } from '../../lib/fileParsers'
 import { focusRingInset } from '../../lib/focus'
 
-/** "Open a file" — accepts PDF/EPUB/.txt, parses entirely client-side
- * (the file is never uploaded anywhere) and hands the extracted
- * sections back to the caller. Self-contained: owns its own
+/** "Open a file" — accepts PDF/EPUB/Word (.docx)/.txt, parses entirely
+ * client-side (the file is never uploaded anywhere) and hands the
+ * extracted sections back to the caller. Self-contained: owns its own
  * loading/error state so the Reader page doesn't need to know
  * anything about File objects or parser internals. */
 export function FileOpenButton({
@@ -57,7 +57,7 @@ export function FileOpenButton({
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf,.epub,.txt,application/pdf,application/epub+zip,text/plain"
+        accept=".pdf,.epub,.docx,.txt,application/pdf,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
         onChange={handleFileChange}
         className="sr-only"
         id="file-open-input"

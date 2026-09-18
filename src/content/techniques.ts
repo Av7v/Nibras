@@ -8,13 +8,23 @@
  * so the UI can display it distinctly and TTS can skip it (a citation
  * read aloud mid-sentence is not useful listening).
  *
+ * Task #362 (2026-09-10, Amal): the per-technique evidence-STRENGTH
+ * badge ('well-established'/'promising'/'weak') and the free-text
+ * `evidenceNote` nuance field (e.g. "strong as a principle, weak for
+ * the specific mechanism") were REMOVED app-wide — cite the source so
+ * a reader can look it up themselves, but don't have the app itself
+ * hand down a strength verdict on it. Every `source` citation and the
+ * substance of every `whyItHelps` explanation are unchanged; only
+ * language that GRADED how strong/weak/limited the evidence is (in
+ * either the structured fields or inline prose) was removed or
+ * reworded to state the mechanism plainly instead.
+ *
  * Bilingual: Arabic is idiomatic (per the source doc's own note), not
  * a literal translation. Written undiacritized (adult default, per
  * audit F15) — a tashkeel toggle is a future increment, not this one.
  */
 
 export type TechniqueCategory = 'reading' | 'comprehension' | 'focus'
-export type EvidenceLevel = 'well-established' | 'promising' | 'weak'
 
 interface TechniqueCopy {
   title: string
@@ -22,16 +32,11 @@ interface TechniqueCopy {
   steps: string[]
   whyItHelps: string
   source: string
-  /** Only present where the source doc itself flags a nuance beyond
-   * the single evidence badge (e.g. "strong as a principle, weak for
-   * the specific mechanism"). */
-  evidenceNote?: string
 }
 
 export interface Technique {
   id: string
   category: TechniqueCategory
-  evidence: EvidenceLevel
   en: TechniqueCopy
   ar: TechniqueCopy
 }
@@ -41,7 +46,6 @@ export const TECHNIQUES: Technique[] = [
   {
     id: 'r1',
     category: 'reading',
-    evidence: 'well-established',
     en: {
       title: 'Read while listening',
       summary: 'Follow the words with your eyes while a voice reads them aloud.',
@@ -53,7 +57,7 @@ export const TECHNIQUES: Technique[] = [
       whyItHelps:
         'Seeing and hearing each word together strengthens the link between the letters and their sounds, which improves comprehension for readers with reading difficulties.',
       source:
-        'Wood et al., Journal of Learning Disabilities, 2018 (text-to-speech meta-analysis); Keelor et al., Annals of Dyslexia, 2023 (synchronized highlighting); Gerbier et al., Computer Speech & Language, 2018 (audio-visual synchronization).',
+        'Wood et al., Journal of Learning Disabilities, 2018 (text-to-speech meta-analysis); Keelor et al., Annals of Dyslexia, 2023 (synchronised highlighting); Gerbier et al., Computer Speech & Language, 2018 (audio-visual synchronisation).',
     },
     ar: {
       title: 'اقرأ وأنت تستمع',
@@ -71,7 +75,6 @@ export const TECHNIQUES: Technique[] = [
   {
     id: 'r2',
     category: 'reading',
-    evidence: 'well-established',
     en: {
       title: 'Give the text room to breathe',
       summary: 'Add space between lines and words so letters feel less crowded.',
@@ -100,7 +103,6 @@ export const TECHNIQUES: Technique[] = [
   {
     id: 'r3',
     category: 'reading',
-    evidence: 'well-established',
     en: {
       title: 'Shorten the line',
       summary: 'Narrow the text so each line holds fewer words.',
@@ -129,7 +131,6 @@ export const TECHNIQUES: Technique[] = [
   {
     id: 'r4',
     category: 'reading',
-    evidence: 'well-established',
     en: {
       title: 'Make the text yours',
       summary: 'Adjust the font, size, and background until reading feels comfortable to you.',
@@ -139,10 +140,9 @@ export const TECHNIQUES: Technique[] = [
         'Pick a soft background, like cream, instead of bright white.',
       ],
       whyItHelps:
-        'Dyslexia varies from person to person, so the strongest, best-supported principle is letting each reader adjust the display; a soft off-white background also cuts glare. There is no single "magic" font, and coloured tints are a matter of comfort.',
+        'Dyslexia varies from person to person, so the guiding principle is letting each reader adjust the display; a soft off-white background also cuts glare. There is no single "magic" font, and coloured tints are a matter of comfort.',
       source:
         'CAST UDL Guidelines 3.0; BDA Dyslexia Style Guide, 2023; on the honest limits: Wery & Diliberto, 2017; Griffiths et al., 2016.',
-      evidenceNote: 'As a general principle; specific "dyslexia fonts" and colour tints are weak evidence.',
     },
     ar: {
       title: 'اجعل النص على مقاسك',
@@ -153,9 +153,8 @@ export const TECHNIQUES: Technique[] = [
         'اختر خلفيةً هادئة، كلون الكريم، بدل الأبيض الناصع.',
       ],
       whyItHelps:
-        'عسر القراءة يختلف من شخص لآخر، لذا فأقوى مبدأ مدعوم هو أن يضبط كل قارئ العرض بنفسه، والخلفية الفاتحة الهادئة تخفّف الوهج. لا يوجد خطّ «سحري» واحد، والتلوين مسألة راحة.',
+        'عسر القراءة يختلف من شخص لآخر، لذا فالمبدأ الأساسي هو أن يضبط كل قارئ العرض بنفسه، والخلفية الفاتحة الهادئة تخفّف الوهج. لا يوجد خطّ «سحري» واحد، والتلوين مسألة راحة.',
       source: 'CAST UDL 3.0؛ دليل BDA، 2023؛ وحول الحدود بأمانة: ويري وديليبرتو، 2017؛ غريفيثس وزملاؤه، 2016.',
-      evidenceNote: 'كمبدأ عام؛ أما خطوط عسر القراءة المحددة والتلوين فأدلتها ضعيفة.',
     },
   },
 
@@ -163,7 +162,6 @@ export const TECHNIQUES: Technique[] = [
   {
     id: 'c1',
     category: 'comprehension',
-    evidence: 'well-established',
     en: {
       title: 'Read in small chunks',
       summary: 'Break long text into small pieces and take one at a time.',
@@ -188,7 +186,6 @@ export const TECHNIQUES: Technique[] = [
   {
     id: 'c2',
     category: 'comprehension',
-    evidence: 'well-established',
     en: {
       title: 'Look before you read',
       summary: 'Skim the headings and pictures first to know where the text is going.',
@@ -198,7 +195,7 @@ export const TECHNIQUES: Technique[] = [
         'Guess what the text will be about before you start.',
       ],
       whyItHelps:
-        'Previewing and predicting activates what you already know, giving new information a place to attach. It is one of the comprehension strategies with the strongest research support.',
+        'Previewing and predicting activates what you already know, giving new information a place to attach.',
       source: 'National Reading Panel, 2000; Palincsar & Brown (reciprocal teaching), 1984.',
     },
     ar: {
@@ -210,14 +207,13 @@ export const TECHNIQUES: Technique[] = [
         'خمّن موضوع النص قبل أن تبدأ.',
       ],
       whyItHelps:
-        'التصفّح والتوقّع ينشّطان معرفتك السابقة، فيجد المحتوى الجديد مكاناً يتعلّق به، وهذه من أكثر استراتيجيات الفهم دعماً بالبحث.',
+        'التصفّح والتوقّع ينشّطان معرفتك السابقة، فيجد المحتوى الجديد مكاناً يتعلّق به.',
       source: 'National Reading Panel، 2000؛ بالينكسار وبراون، 1984.',
     },
   },
   {
     id: 'c3',
     category: 'comprehension',
-    evidence: 'well-established',
     en: {
       title: 'Say it in your own words',
       summary: 'After each part, retell the main idea in your own words.',
@@ -228,7 +224,7 @@ export const TECHNIQUES: Technique[] = [
       ],
       whyItHelps:
         'Putting an idea into your own words forces you to build meaning instead of just passing your eyes over the text, and it shows you at once what you did not understand.',
-      source: 'National Reading Panel, 2000 (summarization); Palincsar & Brown, 1984.',
+      source: 'National Reading Panel, 2000 (summarisation); Palincsar & Brown, 1984.',
     },
     ar: {
       title: 'أعد صياغته بكلماتك',
@@ -246,7 +242,6 @@ export const TECHNIQUES: Technique[] = [
   {
     id: 'c4',
     category: 'comprehension',
-    evidence: 'well-established',
     en: {
       title: 'Map the ideas',
       summary: 'Turn the text into a simple map that shows how the ideas connect.',
@@ -257,8 +252,7 @@ export const TECHNIQUES: Technique[] = [
       ],
       whyItHelps:
         'A visual map shows structure that a wall of text hides, and building one raises comprehension and vocabulary for learners with learning difficulties.',
-      source: 'Dexter & Hughes, 2011 (graphic-organizer meta-analysis); National Reading Panel, 2000.',
-      evidenceNote: 'Evidence is strongest for school-age learners; for adults, treat it as a sound study strategy.',
+      source: 'Dexter & Hughes, 2011 (graphic-organiser meta-analysis); National Reading Panel, 2000.',
     },
     ar: {
       title: 'ارسم خريطةً للأفكار',
@@ -267,7 +261,6 @@ export const TECHNIQUES: Technique[] = [
       whyItHelps:
         'الخريطة البصرية تُظهر البنية التي يخفيها النص المتّصل، وبناؤها يرفع الفهم والحصيلة اللغوية لدى من يجدون صعوبة في التعلّم.',
       source: 'دكستر وهيوز، 2011؛ National Reading Panel، 2000.',
-      evidenceNote: 'الدليل أقوى لدى الأطفال في سنّ المدرسة، وهي للكبار استراتيجية مذاكرة جيدة.',
     },
   },
 
@@ -275,7 +268,6 @@ export const TECHNIQUES: Technique[] = [
   {
     id: 'f1',
     category: 'focus',
-    evidence: 'promising',
     en: {
       title: 'Focus sprints',
       summary: 'Work in short focused bursts with a small break in between.',
@@ -304,7 +296,6 @@ export const TECHNIQUES: Technique[] = [
   {
     id: 'f2',
     category: 'focus',
-    evidence: 'well-established',
     en: {
       title: 'Clear the clutter',
       summary: 'Remove what pulls your eyes and ears away before you start.',
@@ -315,7 +306,7 @@ export const TECHNIQUES: Technique[] = [
       ],
       whyItHelps:
         'A calm, uncluttered space lowers the demands on attention, which is guidance built into both cognitive-accessibility and universal-design standards.',
-      source: 'W3C COGA, "Making Content Usable"; CAST UDL Guidelines 3.0 (minimize distractions).',
+      source: 'W3C COGA, "Making Content Usable"; CAST UDL Guidelines 3.0 (minimise distractions).',
     },
     ar: {
       title: 'أبعِد المشتّتات',
@@ -333,7 +324,6 @@ export const TECHNIQUES: Technique[] = [
   {
     id: 'f3',
     category: 'focus',
-    evidence: 'well-established',
     en: {
       title: 'One task at a time',
       summary: 'Do a single thing at a time instead of switching back and forth.',
@@ -358,7 +348,6 @@ export const TECHNIQUES: Technique[] = [
   {
     id: 'f4',
     category: 'focus',
-    evidence: 'weak',
     en: {
       title: 'Keep your place',
       summary: 'Guide your eyes along the line with a finger, cursor, or marker.',
@@ -368,8 +357,8 @@ export const TECHNIQUES: Technique[] = [
         'Use a ruler or a card to cover the lines below if that helps.',
       ],
       whyItHelps:
-        'Guiding the eye helps some readers stop skipping or re-reading lines and keeps attention on one line at a time. It is a widely used practical aid, though the direct research evidence is limited. Keep it if it helps you.',
-      source: 'BDA / dyslexia-support practitioner guidance (practical aid; limited controlled evidence).',
+        'Guiding the eye helps some readers stop skipping or re-reading lines and keeps attention on one line at a time. It is a widely used practical aid, though it has not been closely tested in controlled studies. Keep it if it helps you.',
+      source: 'BDA / dyslexia-support practitioner guidance.',
     },
     ar: {
       title: 'تتبّع موضعك أثناء القراءة',
@@ -380,8 +369,8 @@ export const TECHNIQUES: Technique[] = [
         'استخدم مِسطرة أو بطاقة لتغطية السطور الأسفل إن ساعدك ذلك.',
       ],
       whyItHelps:
-        'توجيه العين يساعد بعض القرّاء على تجنّب تخطّي السطور أو تكرارها، ويُبقي الانتباه على سطرٍ واحد في المرّة. وهي وسيلة عملية شائعة، وإن كان الدليل البحثي المباشر محدوداً، فاحتفظ بها إن نفعتك.',
-      source: 'إرشادات BDA ومختصّي دعم عسر القراءة (وسيلة عملية، دليلها المباشر محدود).',
+        'توجيه العين يساعد بعض القرّاء على تجنّب تخطّي السطور أو تكرارها، ويُبقي الانتباه على سطرٍ واحد في المرّة. وهي وسيلة عملية شائعة، غير أنها لم تُختبَر اختباراً دقيقاً في دراسات مضبوطة، فاحتفظ بها إن نفعتك.',
+      source: 'إرشادات BDA ومختصّي دعم عسر القراءة.',
     },
   },
   // f5 (task #131, 2026-08-14) — drafted by nibras-edu, Arabic
@@ -389,14 +378,16 @@ export const TECHNIQUES: Technique[] = [
   // em-dashes removed both languages per Amal's standing preference.
   // Ties to «سُكون» (#93) and reuses its exact dose wording (#84: خمس
   // دقائق / ثلاثين نفَساً) so the two surfaces never disagree on how
-  // long/how many breaths. Evidence badge 'promising': the calming
-  // effect itself is well-established, but its benefit FOR READING
-  // specifically is an indirect, untested link (evidenceNote says so
-  // explicitly) — refs = references-master §H 30-32.
+  // long/how many breaths. refs = references-master §H 30-32. Task
+  // #362 (2026-09-10): this card used to carry a 'promising' evidence
+  // badge plus an `evidenceNote` spelling out that the calming effect
+  // itself is well-established while its benefit FOR READING
+  // specifically is an indirect, untested link — both removed app-wide
+  // (cite the sources, don't have the app grade their strength); the
+  // sources themselves are unchanged below.
   {
     id: 'f5',
     category: 'focus',
-    evidence: 'promising',
     en: {
       title: 'Slow your breathing',
       summary: 'Breathe slowly and evenly to calm yourself and settle before you read.',
@@ -409,8 +400,6 @@ export const TECHNIQUES: Technique[] = [
         "Slow, paced breathing calms the body's stress response and eases the everyday tension that reading can bring, making it easier to settle and hold your focus, before or while you read.",
       source:
         'Magnon et al., Scientific Reports, 2021; Laborde et al., 2022 (meta-analysis); Zaccaro et al., 2018 (systematic review).',
-      evidenceNote:
-        'The calming, tension-easing effect of slow breathing is well-supported; its help for reading specifically is a sensible, indirect link rather than something tested directly.',
     },
     ar: {
       title: 'تنفّس ببطء',
@@ -423,8 +412,6 @@ export const TECHNIQUES: Technique[] = [
       whyItHelps:
         'التنفّس البطيء المنتظم يهدّئ استجابة الجسم للتوتّر، ويخفّف التوتّر اليومي الذي قد يرافق القراءة، فيسهُل أن تستقرّ وتحافظ على تركيزك، قبل القراءة أو أثناءها.',
       source: 'ماغنون وزملاؤه، Scientific Reports، 2021؛ لابورد وزملاؤه، 2022 (تحليل بَعدي)؛ زاكارو وزملاؤه، 2018 (مراجعة منهجية).',
-      evidenceNote:
-        'الأثر المهدّئ للتنفّس البطيء مدعوم جيداً بالبحث؛ أما نفعه للقراءة تحديداً فرابط معقول غير مُختبَر مباشرةً.',
     },
   },
 ]

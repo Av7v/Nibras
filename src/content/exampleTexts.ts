@@ -42,7 +42,7 @@ export const EXAMPLE_TEXTS: ExampleText[] = [
     id: 'reading',
     title: 'Reading',
     lang: 'en',
-    text: 'Reading is a light that brightens the mind, and a door that opens endless worlds to the soul. With every page your horizons widen, and the world grows greater in your eyes. Take your time as you read, for its beauty lies in savoring each word, not in rushing to the end. Read with love, and in every line you will find a radiance that carries you farther than you ever imagined.',
+    text: 'Reading is a light that brightens the mind, and a door that opens endless worlds to the soul. With every page your horizons widen, and the world grows greater in your eyes. Take your time as you read, for its beauty lies in savouring each word, not in rushing to the end. Read with love, and in every line you will find a radiance that carries you further than you ever imagined.',
   },
   {
     id: 'reading',

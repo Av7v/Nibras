@@ -204,6 +204,14 @@ export interface XaiTextRequest {
   systemPrompt: string
   /** The user's own text to operate on (untrusted, caller caps length). */
   userText: string
+  /** Optional hard ceiling on COMPLETION tokens (xAI `max_tokens`). Set by
+   * short-answer callers (e.g. /ask, task #369 P2-1) so the completion is
+   * bounded and the spend-cap pre-estimate is a truer upper bound. Note:
+   * grok-4.6 bills reasoning tokens SEPARATELY (see XaiUsage), which this
+   * does NOT cap — the per-token/global spend cap remains the real ceiling;
+   * this just keeps the completion (and latency) small. Omitted → xAI's
+   * default, i.e. exactly the previous behaviour for /summarize etc. */
+  maxTokens?: number
 }
 
 export interface XaiTextResult {
@@ -234,6 +242,9 @@ export async function generateText(req: XaiTextRequest): Promise<XaiTextResult> 
       { role: 'system', content: req.systemPrompt },
       { role: 'user', content: req.userText },
     ],
+    // #369 P2-1: bound the completion when the caller asks (e.g. /ask).
+    // Omitted -> xAI default, unchanged for /summarize/explain/translate.
+    ...(req.maxTokens && req.maxTokens > 0 ? { max_tokens: req.maxTokens } : {}),
   }
 
   let res: Response

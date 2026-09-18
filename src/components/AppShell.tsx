@@ -4,7 +4,9 @@ import { Outlet, useLocation } from 'react-router'
 import { AccessGate } from './AccessGate'
 import { AppShellHeader } from './AppShellHeader'
 import { AppShellSidebar } from './AppShellSidebar'
+import { FocusModeProvider, useFocusModeActive } from './FocusMode'
 import { HeaderSlotProvider } from './HeaderSlot'
+import { NibrasGuideMascot } from './NibrasGuideMascot'
 
 /**
  * Primary app-shell for Dashboard/Reader/Techniques/Profile/Privacy/
@@ -34,10 +36,32 @@ import { HeaderSlotProvider } from './HeaderSlot'
  * user going anywhere.
  */
 export function AppShell() {
+  // Task #360 — a thin outer wrapper so AppShellContent below can
+  // itself READ the focus-mode value via useFocusModeActive(): a
+  // component can't consume a context Provider it creates in the very
+  // same function body (the Provider only affects DESCENDANTS), so the
+  // actual shell markup lives in a separate inner component instead.
+  return (
+    <FocusModeProvider>
+      <AppShellContent />
+    </FocusModeProvider>
+  )
+}
+
+function AppShellContent() {
   const { t } = useTranslation()
   const { pathname } = useLocation()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const menuButtonRef = useRef<HTMLButtonElement | null>(null)
+  // Task #360 — the Reader's "Focus mode" toggle (components/FocusMode.tsx)
+  // asks THIS shell to hide its own site-navigation chrome: the sidebar
+  // here, and (inside AppShellHeader.tsx itself) the brand breadcrumb +
+  // language toggle + colour/voice controls. The page's OWN injected
+  // header-slot buttons (e.g. the Reader's "Focus mode"/"Reading
+  // settings"/"Calmness" buttons) deliberately keep rendering either way
+  // — those are reading controls, not site chrome, and one of them is
+  // the reader's own way back OUT of focus mode.
+  const focusActive = useFocusModeActive()
 
   useEffect(() => {
     setMobileNavOpen(false)
@@ -64,10 +88,21 @@ export function AppShell() {
             shell). Renders nothing at all unless a real AI call
             actually needs a code and doesn't have a valid one — see
             AccessGate.tsx's own header for why this is reactive, not
-            a proactive block on the whole app. */}
+            a proactive block on the whole app. Deliberately NOT gated
+            behind focusActive — a real access prompt must never be
+            hidden by a "distraction-free" mode. */}
         <AccessGate />
 
-        <AppShellSidebar isOpen={mobileNavOpen} onClose={closeMobileNav} />
+        {/* Task #366 — «مرشد نبراس» / the Nibras voice-guide mascot,
+            same "mount once here, not per-page" reasoning as
+            AccessGate just above: every route under this shell offers
+            it now (see content/guideMascotScripts.ts's own registry —
+            every AppShell child has a scripted entry), and
+            NibrasGuideMascot.tsx itself would still render nothing at
+            all if some future route were ever added without one. */}
+        <NibrasGuideMascot />
+
+        {!focusActive && <AppShellSidebar isOpen={mobileNavOpen} onClose={closeMobileNav} />}
 
         <div className="flex min-w-0 flex-1 flex-col">
           <AppShellHeader onOpenMenu={() => setMobileNavOpen(true)} menuButtonRef={menuButtonRef} />

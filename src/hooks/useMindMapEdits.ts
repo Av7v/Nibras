@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { loadMindMapEdits, saveMindMapEdits, type MindMapEdits } from '../lib/mindMapEdits'
 
 function emptyEdits(): MindMapEdits {
-  return { labelOverrides: {}, addedNodes: [] }
+  return { labelOverrides: {}, addedNodes: [], removedNodeIds: [] }
 }
 
 function newNodeId(): string {
@@ -38,5 +38,23 @@ export function useMindMapEdits(mapId: string) {
     return id
   }
 
-  return { edits, setLabel, addNode }
+  /** Marks `nodeId` (and, once applyMindMapEdits rebuilds the tree, its
+   * whole subtree) as removed — #441, Amal's exact ask: «مسح
+   * المستطيلات والاسم». Works identically for a pre-authored node or
+   * one from addedNodes above; this function doesn't need to tell them
+   * apart. Does NOT decide whether `nodeId` is allowed to be deleted at
+   * all (the caller, MindMapView, must never pass the root's id here
+   * in the first place — its Delete button stays disabled for the
+   * root) — this just records the marker. `?? []` guards a map whose
+   * edits were persisted before this field existed. */
+  function deleteNode(nodeId: string) {
+    setAll((prev) => {
+      const forMap = prev[mapId] ?? emptyEdits()
+      const already = forMap.removedNodeIds ?? []
+      if (already.includes(nodeId)) return prev
+      return { ...prev, [mapId]: { ...forMap, removedNodeIds: [...already, nodeId] } }
+    })
+  }
+
+  return { edits, setLabel, addNode, deleteNode }
 }

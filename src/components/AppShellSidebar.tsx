@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router'
 import {
@@ -16,12 +16,20 @@ import {
   PersonIcon,
 } from './icons'
 import { focusRing, focusRingInset } from '../lib/focus'
+import { usePageBackgroundPreference } from '../hooks/usePageBackgroundPreference'
+import { MascotLauncher } from './MascotLauncher'
 
 /**
- * The app's primary navigation — a persistent brand-blue (`#004aad`,
- * sampled from Amal's منصة نبراس deck) sidebar wrapping
- * Dashboard/Reader/Techniques/Profile/Privacy/Sign-in (see
- * AppShell.tsx). Promoted 2026-08-12 from a contained one-screen
+ * The app's primary navigation — a persistent brand-navy (`#002147`,
+ * Oxford navy, Amal's primary as of 2026-09-15 — supersedes the
+ * deck-sampled `#004aad` used 2026-08-12–2026-09-15; see index.css's own
+ * accent comment for the full derivation + contrast history) sidebar
+ * wrapping every route
+ * under AppShell (Dashboard, Reading Techniques, Reader, Reading
+ * Buddy, Mind Maps, Letter Sounds, Library, Profile, Privacy,
+ * Sign-in — see App.tsx for the current, authoritative list; this
+ * sidebar's own nav items further below are the live source of what's
+ * actually linked). Promoted 2026-08-12 from a contained one-screen
  * preview at `/preview/dashboard` after Amal approved the direction
  * («ابي داشبورد» — "I want a dashboard").
  *
@@ -37,10 +45,10 @@ import { focusRing, focusRingInset } from '../lib/focus'
  * pages/ReadingBuddy.tsx) — this is a genuinely different situation
  * from the one #114 fixed, not a silent revert of that decision; the
  * in-Reader player is untouched and still there as a convenience. AI
- * Assistant is the one remaining honest "coming soon" row (plain text, not a
- * link/button) because its route doesn't exist yet — never a dead/fake
- * click target, matching the project's "no fake success" rule already
- * applied to SignIn. Techniques was renamed «التقنيات»->«تقنيات القراءة» /
+ * Assistant's own honest "coming soon" row no longer lives in THIS
+ * sidebar at all (see this file's own closing comment below for when/why
+ * it left) — it's Dashboard.tsx's ComingSoonToolCard now, the same
+ * "no fake success" rule SignIn also follows. Techniques was renamed «التقنيات»->«تقنيات القراءة» /
  * "Techniques"->"Reading Techniques" (task #190) and moved to position 2,
  * right after Dashboard (task #192, same day) — both confirmed by Amal via
  * team-lead, 2026-08-15; see the NavItem's own comment below for the
@@ -71,6 +79,23 @@ export function AppShellSidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
   const { pathname } = useLocation()
   const navRef = useRef<HTMLElement | null>(null)
   const closeButtonRef = useRef<HTMLButtonElement | null>(null)
+
+  // Task #350 whole-screen (Amal, 2026-09-13): when a page colour is chosen the
+  // sidebar joins the uniform tint. Its background becomes the tint (via
+  // `--color-page-bg`, set by the App-root effect) and its foreground FLIPS to
+  // dark ink by scope-overriding `--color-accent-ink` -> `--color-ink` on THIS
+  // element only. The whole sidebar already keys off accent-ink (text-accent-ink
+  // + the accent-ink/NN active/hover/chip/muted mixes), so they all flip
+  // together: labels/wordmark/tagline/footer/guest go dark; the active item
+  // becomes ink@15% (a deeper shade of the tint); hover ink@10%. `--color-accent`
+  // is deliberately NOT overridden, so the keyboard focus ring stays brand-navy
+  // (clearly visible on the light tint). 'No colour' -> no override, so the
+  // original navy background + white text scheme is restored unchanged.
+  const { value } = usePageBackgroundPreference()
+  const tinted = value !== 'none'
+  const navStyle: CSSProperties | undefined = tinted
+    ? ({ backgroundColor: 'var(--color-page-bg)', '--color-accent-ink': 'var(--color-ink)' } as CSSProperties)
+    : undefined
 
   // Focus the drawer's own close button on open — only meaningful below
   // md (the only way `isOpen` becomes true), matches CalmSpace.tsx's
@@ -137,6 +162,7 @@ export function AppShellSidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
       <nav
         ref={navRef}
         aria-label={t('dashboard.sidebarNavLabel')}
+        style={navStyle}
         // `invisible` (not just the off-screen transform) below md when
         // closed: a `transform`-translated element is still fully
         // Tab-reachable and screen-reader-navigable even while visually
@@ -163,7 +189,7 @@ export function AppShellSidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
         // their own, non-conflicting overrides. A compound variant that
         // names BOTH conditions together resolves the ambiguity
         // explicitly rather than gambling on variant emission order.
-        className={`fixed inset-y-0 start-0 z-40 flex w-[255px] flex-none flex-col justify-between bg-accent py-6 transition-transform duration-200 motion-reduce:transition-none md:static md:z-auto md:visible md:translate-x-0 md:rtl:translate-x-0 ${
+        className={`fixed inset-y-0 start-0 z-40 flex w-[255px] flex-none flex-col justify-between bg-accent py-6 transition-transform duration-200 motion-reduce:transition-none md:static md:z-auto md:visible md:translate-x-0 md:rtl:translate-x-0 ${tinted ? 'border-e border-ink/15 ' : ''}${
           isOpen ? 'visible translate-x-0' : 'invisible -translate-x-full rtl:translate-x-full'
         }`}
       >
@@ -208,7 +234,11 @@ export function AppShellSidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
                 (#004aad is notably brighter than the old #002147, so the
                 same opacity gives less contrast against it — /65 dropped
                 to 4.36:1, below AA; /75 restores 5.27:1, script-verified,
-                see index.css's accent comment for the full re-check). */}
+                see index.css's accent comment for the full re-check).
+                2026-09-15: accent reverted to #002147 (this time as the
+                permanent primary, see index.css) — going DARKER only
+                raises this ratio further (/75 is now 9.47:1), so /75
+                stays correct with room to spare; no change needed. */}
             <p className="mt-1.5 text-[0.6875rem] leading-snug text-accent-ink/75">{t('dashboard.brandTagline')}</p>
           </div>
 
@@ -274,6 +304,15 @@ export function AppShellSidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
             label={t('profile.kicker')}
             current={pathname.startsWith('/profile')}
           />
+          {/* «مرشد نبراس» docked launcher — moved UP to sit directly under
+              Profile as the last main-nav item, bigger, so it reads as a
+              prominent helper and is not buried at the very bottom (Amal
+              2026-09-14: «ترفعه بعد الملف الشخصي مهو آخر شي وكبّره»). Clicking
+              opens the chat popup, which floats free of this sidebar's
+              transform (mounted once in AppShell via lib/mascotChat). */}
+          <li>
+            <MascotLauncher variant="sidebar" onActivate={onClose} />
+          </li>
         </ul>
       </div>
 
@@ -317,6 +356,10 @@ export function AppShellSidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
             <span className="block truncate text-[0.75rem] text-accent-ink/78">{t('profile.notSignedIn')}</span>
           </span>
         </Link>
+
+        {/* «مرشد نبراس» launcher moved UP into the nav list, directly under
+            the Profile item (Amal 2026-09-14) — see the <li> after the
+            Profile NavItem above. */}
       </div>
     </nav>
     </>

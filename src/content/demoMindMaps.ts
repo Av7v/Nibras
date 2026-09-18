@@ -126,7 +126,7 @@ export const DEMO_MIND_MAPS: DemoMindMap[] = [
         { id: 'step1', label: 'Make it larger' },
         { id: 'step2', label: 'Try a clearer font' },
         { id: 'step3', label: 'Pick a soft background' },
-        { id: 'why', label: 'Everyone’s needs are different' },
+        { id: 'why', label: "Everyone's needs are different" },
       ],
     },
     ar: {
@@ -267,7 +267,7 @@ export const DEMO_MIND_MAPS: DemoMindMap[] = [
       children: [
         { id: 'step1', label: 'Close extra tabs' },
         { id: 'step2', label: 'Put the phone out of reach' },
-        { id: 'step3', label: 'Hide what you don’t need now' },
+        { id: 'step3', label: "Hide what you don't need now" },
         { id: 'why', label: 'Lowers the demand on attention' },
       ],
     },

@@ -132,6 +132,19 @@ export function speak(
      * calm voice — the first caller that needs a pitch OTHER than the
      * default, so this stayed unbuilt until then. */
     pitch?: number
+    /** Task #361 (2026-09-13) — fires as the engine reaches each spoken
+     * WORD, carrying `charIndex` (the start offset of that word in
+     * `text`) and, where the engine reports it, `charLength`. This is
+     * the REAL, native word-timing signal the word-by-word reading
+     * ruler follows to highlight exactly the word being spoken (see
+     * components/reader/WordHighlightRuler.tsx) — not an assumed pace.
+     * Chrome/Edge/Safari and iOS WKWebView fire word boundary events;
+     * a few engines (notably Firefox historically) do not, in which
+     * case this simply never fires and the highlight honestly stays
+     * put rather than guessing — the caller never fabricates positions.
+     * Optional and inert for every existing caller that doesn't pass
+     * it (the utterance's onboundary is only wired when it's given). */
+    onBoundary?: (charIndex: number, charLength?: number) => void
   },
 ): boolean {
   if (!isSpeechSupported()) return false
@@ -147,6 +160,17 @@ export function speak(
   if (opts?.onStart) utterance.onstart = opts.onStart
   if (opts?.onEnd) utterance.onend = opts.onEnd
   if (opts?.onError) utterance.onerror = opts.onError
+  if (opts?.onBoundary) {
+    const onBoundary = opts.onBoundary
+    utterance.onboundary = (event: SpeechSynthesisEvent) => {
+      // Forward every boundary the engine reports (word boundaries on
+      // the engines Nibras targets; a coarser sentence boundary still
+      // points at a real word start, so the caller's char→word mapping
+      // stays correct either way — never wrong, just coarser on an
+      // engine that only reports sentences).
+      onBoundary(event.charIndex, event.charLength)
+    }
+  }
   window.speechSynthesis.speak(utterance)
   return true
 }

@@ -1,15 +1,21 @@
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  DIMMER_MAX_OPACITY,
+  DIMMER_OVERLAY_COLOR,
   RULER_COLORS,
   RULER_COLOR_LABEL_KEY,
-  TINTS,
+  effectiveReadingBg,
   type ArabicSettings,
   type LatinSettings,
+  type ReadingRulerMode,
   type RulerColor,
   type Tint,
 } from '../../lib/readingSettings'
+import { mixColors } from '../../lib/color'
+import { contrastRatio, WCAG_AA_BODY_TEXT_RATIO } from '../../lib/contrast'
 import { CloseIcon, InfoIcon } from '../icons'
-import { ColorWheelField, RulerColorField, SliderField, TintField, ToggleField, TypefaceField } from './SettingsFields'
+import { ChoiceField, ColorWheelField, RulerColorField, SliderField, TintField, ToggleField, TypefaceField } from './SettingsFields'
 import { focusRing, focusRingInset } from '../../lib/focus'
 
 /**
@@ -32,6 +38,14 @@ export function SettingsPanel({
   setReadingRuler,
   readingRulerColor,
   setReadingRulerColor,
+  readingRulerMode,
+  setReadingRulerMode,
+  wordSyncRulerColor,
+  setWordSyncRulerColor,
+  dimmerEnabled,
+  setDimmerEnabled,
+  dimmerIntensity,
+  setDimmerIntensity,
   onClose,
 }: {
   isArabic: boolean
@@ -45,6 +59,17 @@ export function SettingsPanel({
   setReadingRuler: (value: boolean) => void
   readingRulerColor: RulerColor
   setReadingRulerColor: (value: RulerColor) => void
+  /** Task #361 — which of the ruler's two mechanisms is active, and
+   * the second (word-highlight) mode's own independent colour choice. */
+  readingRulerMode: ReadingRulerMode
+  setReadingRulerMode: (value: ReadingRulerMode) => void
+  wordSyncRulerColor: RulerColor
+  setWordSyncRulerColor: (value: RulerColor) => void
+  /** Task #360 — the light/glare-reducing overlay's on/off + strength. */
+  dimmerEnabled: boolean
+  setDimmerEnabled: (value: boolean) => void
+  dimmerIntensity: number
+  setDimmerIntensity: (value: number) => void
   onClose: () => void
 }) {
   const { t } = useTranslation()
@@ -58,6 +83,23 @@ export function SettingsPanel({
   const rulerColorLabels = Object.fromEntries(
     RULER_COLORS.map((color) => [color, t(RULER_COLOR_LABEL_KEY[color])]),
   ) as Record<RulerColor, string>
+
+  // Task #398 review, item 4 — live guardrail for the dimmer below,
+  // mirroring ColorWheelField's OWN "warn, don't block" contrast check
+  // (SettingsFields.tsx) rather than capping the slider: the scrim sits
+  // OVER the reading text too (Reader.tsx's own comment on the overlay
+  // has the numbers), so at high strength it can pull even a
+  // currently-fine text/background pair below WCAG AA. Recomputed from
+  // the CURRENT script's actual colours (not just the app defaults) so
+  // it stays accurate for a reader who already picked a custom colour.
+  const activeReadingSettings = isArabic ? arabic : latin
+  const dimmerContrastRatio = useMemo(() => {
+    const opacity = (dimmerIntensity / 100) * DIMMER_MAX_OPACITY
+    const bg = mixColors(effectiveReadingBg(activeReadingSettings), DIMMER_OVERLAY_COLOR, opacity)
+    const text = mixColors(activeReadingSettings.textColor, DIMMER_OVERLAY_COLOR, opacity)
+    return contrastRatio(text, bg)
+  }, [activeReadingSettings, dimmerIntensity])
+  const dimmerContrastLow = dimmerContrastRatio < WCAG_AA_BODY_TEXT_RATIO
 
   return (
     <aside
@@ -93,18 +135,95 @@ export function SettingsPanel({
           checked={readingRuler}
           onChange={setReadingRuler}
         />
-        {/* Color choice only shown once the ruler is actually on
-            (Amal/team-lead: "make them available when the ruler is
-            relevant") — no point choosing a color for a band that
-            isn't currently drawn. */}
+        {/* Mode + colour choice only shown once the ruler is actually
+            on (Amal/team-lead: "make them available when the ruler is
+            relevant") — no point choosing a mode/color for a guide
+            that isn't currently drawn. Task #361, extended by #465 —
+            THREE selectable mechanisms; 'line' and 'wordSync' each have
+            their OWN colour (RulerColorField is reused as-is for both;
+            only which state it reads/writes changes), 'lineFocus' has
+            none (see the conditional block below its own comment). */}
         {readingRuler && (
-          <RulerColorField
-            legend={t('settings.rulerColor')}
-            name="reading-ruler-color"
-            value={readingRulerColor}
-            onChange={setReadingRulerColor}
-            colorLabels={rulerColorLabels}
-          />
+          <>
+            <ChoiceField
+              legend={t('settings.rulerMode')}
+              name="reading-ruler-mode"
+              value={readingRulerMode}
+              onChange={setReadingRulerMode}
+              options={[
+                { value: 'line', label: t('settings.rulerModeLine'), description: t('settings.rulerModeLineDescription') },
+                { value: 'wordSync', label: t('settings.rulerModeWordSync'), description: t('settings.rulerModeWordSyncDescription') },
+                {
+                  value: 'lineFocus',
+                  label: t('settings.rulerModeLineFocus'),
+                  description: t('settings.rulerModeLineFocusDescription'),
+                },
+              ]}
+            />
+            {/* Task #465 — three modes now, not two: 'line' and
+                'wordSync' each keep their own colour picker; 'lineFocus'
+                has none (it dims, it doesn't pick a hue — see
+                LINE_FOCUS_DIM_OPACITY's own comment), so it renders
+                neither block below rather than falling into an `else`
+                that used to only ever mean "wordSync". */}
+            {readingRulerMode === 'line' && (
+              <RulerColorField
+                legend={t('settings.rulerColor')}
+                name="reading-ruler-color"
+                value={readingRulerColor}
+                onChange={setReadingRulerColor}
+                colorLabels={rulerColorLabels}
+              />
+            )}
+            {readingRulerMode === 'wordSync' && (
+              <RulerColorField
+                legend={t('settings.wordSyncColor')}
+                name="word-sync-ruler-color"
+                value={wordSyncRulerColor}
+                onChange={setWordSyncRulerColor}
+                colorLabels={rulerColorLabels}
+              />
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Task #360 — the light/glare-reducing dimmer overlay. Same
+          script-independent placement + "colour/strength control only
+          shown once it's actually on" pattern as the Reading Ruler just
+          above (Reader.tsx renders the actual overlay). */}
+      <div className="mt-1.5 border-t border-line pt-4">
+        <ToggleField
+          id="dimmer-toggle"
+          label={t('settings.dimmer')}
+          description={t('settings.dimmerDescription')}
+          checked={dimmerEnabled}
+          onChange={setDimmerEnabled}
+        />
+        {dimmerEnabled && (
+          <>
+            <SliderField
+              id="dimmer-intensity"
+              label={t('settings.dimmerIntensity')}
+              min={0}
+              max={100}
+              value={dimmerIntensity}
+              onChange={setDimmerIntensity}
+              formatValue={(v) => `${Math.round(v)}%`}
+            />
+            {/* Warn, don't block — same pattern ColorWheelField's own
+                live contrast check already uses just above (this panel
+                doesn't hard-cap the slider: some readers deliberately
+                want it this dark, e.g. while only listening). Recomputed
+                from the CURRENT script's real colours, so it's accurate
+                for a custom colour choice too, not just the defaults. */}
+            {dimmerContrastLow && (
+              <p className="mt-2.5 flex items-start gap-1 text-[0.8125rem] text-ink-muted">
+                <InfoIcon className="mt-0.5 size-3.5 flex-none text-accent" />
+                {t('settings.dimmerContrastWarning')}
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -240,9 +359,32 @@ function LatinFields({
         legend={t('settings.tint')}
         name="tint-latin"
         value={settings.tint}
-        onChange={(tint) => update({ tint })}
+        onChange={(tint) => update({ tint, backgroundColor: null })}
         caption={t('settings.tintCaption')}
         tintLabels={tintLabels}
+        active={settings.backgroundColor === null}
+      />
+
+      {/* #364 — any-colour background wheel: the presets above are quick
+          shortcuts, this reaches ANY colour. Contrast is checked against
+          the reader's own text colour (valueIsBackground flips the preview
+          so it shows text-on-background truthfully). */}
+      <ColorWheelField
+        idPrefix="bg-color-latin"
+        legend={t('settings.bgColorWheel')}
+        caption={t('settings.bgColorCaption')}
+        value={effectiveReadingBg(settings)}
+        onChange={(backgroundColor) => update({ backgroundColor })}
+        backgroundHex={settings.textColor}
+        valueIsBackground
+        lightnessLabel={t('settings.textColorLightness')}
+        hexLabel={t('settings.textColorHexLabel')}
+        previewLabel={t('settings.textColorPreviewLabel')}
+        wheelAriaLabel={(hex) => t('settings.bgColorWheelLabel', { hex })}
+        formatContrastLabel={(ratio) => t('settings.contrastWithTextLabel', { ratio })}
+        contrastGoodLabel={t('settings.contrastGood')}
+        contrastWarningLabel={t('settings.bgContrastWarningLow')}
+        sampleText="Aa"
       />
 
       <ColorWheelField
@@ -251,7 +393,7 @@ function LatinFields({
         caption={t('settings.textColorCaption')}
         value={settings.textColor}
         onChange={(textColor) => update({ textColor })}
-        backgroundHex={TINTS[settings.tint]}
+        backgroundHex={effectiveReadingBg(settings)}
         lightnessLabel={t('settings.textColorLightness')}
         hexLabel={t('settings.textColorHexLabel')}
         previewLabel={t('settings.textColorPreviewLabel')}
@@ -372,9 +514,30 @@ function ArabicFields({
         legend={t('settings.tint')}
         name="tint-arabic"
         value={settings.tint}
-        onChange={(tint) => update({ tint })}
+        onChange={(tint) => update({ tint, backgroundColor: null })}
         caption={t('settings.tintCaption')}
         tintLabels={tintLabels}
+        active={settings.backgroundColor === null}
+      />
+
+      {/* #364 — any-colour background wheel (see the Latin branch for the
+          rationale); Arabic keeps its own per-script custom background. */}
+      <ColorWheelField
+        idPrefix="bg-color-arabic"
+        legend={t('settings.bgColorWheel')}
+        caption={t('settings.bgColorCaption')}
+        value={effectiveReadingBg(settings)}
+        onChange={(backgroundColor) => update({ backgroundColor })}
+        backgroundHex={settings.textColor}
+        valueIsBackground
+        lightnessLabel={t('settings.textColorLightness')}
+        hexLabel={t('settings.textColorHexLabel')}
+        previewLabel={t('settings.textColorPreviewLabel')}
+        wheelAriaLabel={(hex) => t('settings.bgColorWheelLabel', { hex })}
+        formatContrastLabel={(ratio) => t('settings.contrastWithTextLabel', { ratio })}
+        contrastGoodLabel={t('settings.contrastGood')}
+        contrastWarningLabel={t('settings.bgContrastWarningLow')}
+        sampleText="أب"
       />
 
       <ColorWheelField
@@ -383,7 +546,7 @@ function ArabicFields({
         caption={t('settings.textColorCaption')}
         value={settings.textColor}
         onChange={(textColor) => update({ textColor })}
-        backgroundHex={TINTS[settings.tint]}
+        backgroundHex={effectiveReadingBg(settings)}
         lightnessLabel={t('settings.textColorLightness')}
         hexLabel={t('settings.textColorHexLabel')}
         previewLabel={t('settings.textColorPreviewLabel')}

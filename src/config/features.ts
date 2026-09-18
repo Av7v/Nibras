@@ -24,4 +24,21 @@
 // build time. Flip to `true` once the upstream q8 fix lands and
 // `dtype:'q8'` is reconfirmed working in whisperWorker.ts (swap fp32
 // back to q8 there too, restoring the original ~80MB size).
+//
+// Task #398 review (askreview P1-b, 2026-09-14) — `@huggingface/transformers`
+// lives in package.json's `devDependencies`, not `dependencies`, while
+// this flag is off: with the vite.config.ts alias excluding
+// whisperWorker.ts from the build graph entirely, the shipped bundle
+// never needs it at runtime (confirmed absent from dist/), but `tsc -b`
+// still type-checks that file (it's not excluded from tsconfig.app.json's
+// `include`), so the package must still be INSTALLED for a normal build
+// to succeed — `devDependencies` is the accurate category for "needed to
+// build, never shipped," and it's what makes `npm audit --omit=dev` stop
+// reporting the 4 unfixable HIGH advisories in its transitive
+// onnxruntime-node/adm-zip and sharp deps (neither has a patched version
+// yet) for a dependency that was already zero-exposure at runtime.
+// REMINDER when flipping this flag to `true` for a real release: move
+// `@huggingface/transformers` back to `dependencies` in package.json
+// FIRST — a strict production install (`npm ci --omit=dev`) skips
+// devDependencies entirely and would otherwise break that build.
 export const ARABIC_LISTENING_ENABLED = false

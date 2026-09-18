@@ -11,9 +11,22 @@ import {
 } from '../../lib/textToSpeech'
 import { useSpeechVoices } from '../../hooks/useSpeechVoices'
 import { useVoicePreference } from '../../hooks/useVoicePreference'
+// Task #361 — publish this player's REAL playback progress so the
+// word-by-word reading ruler can highlight the word being spoken. The
+// player is the single voice transport; the ruler is a pure subscriber
+// (see lib/narrationProgress.ts) — no second, competing play button.
+import {
+  pauseNarration,
+  reportNarrationBoundary,
+  reportNarrationFraction,
+  resumeNarration,
+  startNarration,
+  stopNarration,
+} from '../../lib/narrationProgress'
 import { VOICE_RATES } from '../../lib/readingSettings'
-import { PauseIcon, PlayIcon, SpeakerIcon } from '../icons'
+import { DownloadIcon, PauseIcon, PlayIcon, SpeakerIcon } from '../icons'
 import { focusRing, focusRingInset } from '../../lib/focus'
+import { ComingSoonAction } from './ComingSoonAction'
 
 // Task #145 — was this file's own local copy (Reading Buddy's markup
 // pioneered the pattern #127 later extracted into VoiceControls.tsx,
@@ -54,6 +67,19 @@ export function ReadingBuddyPlayer({ text, lang }: { text: string; lang: SpeechL
   const { gender, setGender, rate, setRate } = useVoicePreference()
   const modeRef = useRef<'browser' | 'audio' | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  // #398 review P2 (2026-09-14) — guards the neural "preparing…" race:
+  // synthesizeVoice() awaits a real network round-trip that can take a
+  // few seconds, and nothing disables the rate/voice pills during that
+  // window (only the big play button gets disabled), so a reader can
+  // trigger a SECOND overlapping startPlayback() (a quick rate or voice
+  // change) before the first one's await has resolved. Both calls would
+  // otherwise write to the SAME audioRef element (src, ontimeupdate,
+  // onended, onerror) and both would eventually call setStatus('playing')
+  // — whichever one's await settles last "wins" regardless of which one
+  // the reader actually meant, and the older element handlers can end up
+  // clobbered mid-flight. See startPlayback's own comments for where
+  // this is checked.
+  const playbackAbortRef = useRef<AbortController | null>(null)
   // Task #219's honest error handling — 'accessCode' is only ever
   // transient (the globally-mounted <AccessGate> is the actual
   // "re-enter your code" UI; this local message just explains WHY
@@ -86,10 +112,26 @@ export function ReadingBuddyPlayer({ text, lang }: { text: string; lang: SpeechL
     return () => {
       stopSpeaking()
       audioRef.current?.pause()
+      // Clear the word-highlight ruler's follow-along too — never leave
+      // a word highlighted for text that's no longer being read (#361).
+      stopNarration()
+      // #398 review P2 — cancel any in-flight synthesizeVoice() too, so
+      // a response that arrives after unmount/text-change never touches
+      // this (now stale) closure's refs/state.
+      playbackAbortRef.current?.abort()
     }
   }, [text])
 
   async function startPlayback(atRate: number, withGender: VoiceGender) {
+    // #398 review P2 — a NEWER startPlayback() call (a rate/voice pill
+    // tapped during the "preparing…" window, or a second Play press)
+    // must win outright: cancel whatever the PREVIOUS call was waiting
+    // on before starting this one, so its eventual settle (success or
+    // error) is recognized as stale below and never overwrites state
+    // this call now owns.
+    playbackAbortRef.current?.abort()
+    const controller = new AbortController()
+    playbackAbortRef.current = controller
     setVoiceError(null)
     // Neural render takes a few seconds — show an honest "preparing…"
     // state (button disabled + busy) instead of a dead-looking button.
@@ -107,8 +149,12 @@ export function ReadingBuddyPlayer({ text, lang }: { text: string; lang: SpeechL
     // the utterance itself, never doubled.
     let result: Awaited<ReturnType<typeof synthesizeVoice>>
     try {
-      result = await synthesizeVoice({ text, lang, gender: withGender, rate: 1 })
+      result = await synthesizeVoice({ text, lang, gender: withGender, rate: 1 }, controller.signal)
     } catch (err) {
+      // A newer call already aborted this one — it's already driving
+      // its own status/UI, so this stale continuation must stay silent
+      // (no error flash, no status change) rather than fight it.
+      if (err instanceof DOMException && err.name === 'AbortError') return
       // Task #219: synthesizeVoice now RE-THROWS an access-code/spend-
       // cap problem instead of silently degrading to browser voice —
       // show the honest reason instead of leaving the play button
@@ -125,29 +171,80 @@ export function ReadingBuddyPlayer({ text, lang }: { text: string; lang: SpeechL
       setStatus('idle')
       return
     }
+    // Resolved successfully, but a NEWER call may have superseded this
+    // one in the meantime (it already aborted `controller` above) —
+    // same "stay silent, the newer call owns playback now" rule.
+    if (controller.signal.aborted) return
     modeRef.current = result.mode
     if (result.mode === 'browser') {
       const started = speak(text, lang, {
         gender: withGender,
         rate: atRate,
-        onStart: () => setStatus('playing'),
-        onEnd: () => setStatus('idle'),
-        onError: () => setStatus('idle'),
+        onStart: () => {
+          if (controller.signal.aborted) return
+          setStatus('playing')
+          // Word-by-word ruler: begin a fresh browser-voice follow-along.
+          startNarration('browser')
+        },
+        // #361 — the engine's REAL per-word boundary drives the highlight
+        // (true word-level timing on the engines Nibras targets), never a
+        // guessed pace. `text` here is the SAME string the ruler renders,
+        // so charIndex maps straight onto its words.
+        onBoundary: (charIndex) => reportNarrationBoundary(charIndex),
+        onEnd: () => {
+          setStatus('idle')
+          stopNarration()
+        },
+        onError: () => {
+          setStatus('idle')
+          stopNarration()
+        },
       })
-      if (!started) setStatus('idle')
+      if (!started) {
+        setStatus('idle')
+        stopNarration()
+      }
       return
     }
     if (!audioRef.current) audioRef.current = new Audio()
     const audio = audioRef.current
     audio.src = result.url
     audio.playbackRate = atRate
-    audio.onended = () => setStatus('idle')
-    audio.onerror = () => setStatus('idle')
+    // #361 — the neural provider returns MP3 bytes with NO per-word
+    // timestamps (server/api/_xaiTts.ts), so the word-by-word ruler can't
+    // sync to true word boundaries here. Instead publish an HONEST
+    // approximate pace derived from the REAL audio: playback position ÷
+    // the audio's own duration. The ruler labels this as approximate for
+    // the enhanced voice — never presented as exact per-word timing.
+    audio.ontimeupdate = () => {
+      if (audio.duration > 0 && Number.isFinite(audio.duration)) {
+        reportNarrationFraction(audio.currentTime / audio.duration)
+      }
+    }
+    audio.onended = () => {
+      setStatus('idle')
+      stopNarration()
+    }
+    audio.onerror = () => {
+      setStatus('idle')
+      stopNarration()
+    }
+    // Mark playing BEFORE play() so the first timeupdate isn't dropped by
+    // the store's idle-guard; the catch clears it if playback is blocked.
+    startNarration('neural')
     try {
       await audio.play()
+      // #398 review P2 — the race this whole controller exists for: a
+      // NEWER startPlayback() can abort us and take over audioRef's src/
+      // handlers while THIS await was pending. Without this check, the
+      // stale call would still stamp 'playing' over whatever state the
+      // newer call has already reached.
+      if (controller.signal.aborted) return
       setStatus('playing')
     } catch {
+      if (controller.signal.aborted) return
       setStatus('idle')
+      stopNarration()
     }
   }
 
@@ -156,12 +253,15 @@ export function ReadingBuddyPlayer({ text, lang }: { text: string; lang: SpeechL
       if (modeRef.current === 'browser') pauseSpeaking()
       else audioRef.current?.pause()
       setStatus('paused')
+      // Freeze the ruler highlight on the current word (#361).
+      pauseNarration()
       return
     }
     if (status === 'paused') {
       if (modeRef.current === 'browser') resumeSpeaking()
       else audioRef.current?.play()
       setStatus('playing')
+      resumeNarration()
       return
     }
     startPlayback(rate, gender)
@@ -194,28 +294,31 @@ export function ReadingBuddyPlayer({ text, lang }: { text: string; lang: SpeechL
   // the sidebar/Dashboard entries that used to point here were
   // removed): before this, the player was just a row of icon buttons
   // with no label at all — easy to not recognize as a real, named
-  // feature. h3, not h2 — this sits INSIDE the same <article> whose
-  // OWN heading is Reader.tsx's h2#reading-heading, so it's correctly
-  // subordinate to that, not a sibling top-level section the way
-  // AiAssistantPanel's h2 is (that one lives OUTSIDE the article).
+  // feature. h2 (task #371, 2026-09-13: moved OUT of the tinted
+  // reading-view <article> to sit directly above it, on the page's own
+  // background, so it follows the page/accent theme like Amal asked —
+  // was h3 while nested inside the article, subordinate to that
+  // article's own h2#reading-heading; now a sibling top-level section
+  // of its own, same shape as AiAssistantPanel's own h2, so it needs
+  // the same heading level that component already uses).
   const heading = (
-    <h3 className="mb-1.5 flex items-center gap-2 text-sm font-bold text-ink">
+    <h2 id="reading-buddy-heading" className="mb-1.5 flex items-center gap-2 text-sm font-bold text-ink">
       <SpeakerIcon className="size-[18px] text-accent" />
       {t('dashboard.navReadingBuddy')}
-    </h3>
+    </h2>
   )
 
   if (!voiceAvailable) {
     return (
-      <div className="mb-4">
+      <section aria-labelledby="reading-buddy-heading" className="mb-4">
         {heading}
         <p className="m-0 text-[0.8125rem] text-ink-muted">{t('techniques.noVoice')}</p>
-      </div>
+      </section>
     )
   }
 
   return (
-    <div className="mb-4">
+    <section aria-labelledby="reading-buddy-heading" className="mb-4">
       {heading}
       <p className="mb-2 text-[0.8125rem] text-ink-muted">{t('readingBuddy.discoverabilityHint')}</p>
       <div className="flex flex-wrap items-center gap-3 rounded-control border border-line bg-card px-3.5 py-2.5">
@@ -243,9 +346,13 @@ export function ReadingBuddyPlayer({ text, lang }: { text: string; lang: SpeechL
         className="inline-flex flex-none overflow-hidden rounded-full border-[1.5px] border-line-strong"
       >
         {RATES.map((r) => (
+          // dir="ltr" — see VoiceControls.tsx's SpeedField (this player's
+          // own independent copy of the same pill) for the full bidi
+          // reasoning; task #398 review, 2026-09-14.
           <button
             key={r}
             type="button"
+            dir="ltr"
             aria-pressed={rate === r}
             onClick={() => handleRateChange(r)}
             className={`px-2.5 py-1.5 text-[0.75rem] font-semibold text-ink-muted aria-pressed:bg-accent aria-pressed:text-accent-ink ${focusRingInset}`}
@@ -297,6 +404,14 @@ export function ReadingBuddyPlayer({ text, lang }: { text: string; lang: SpeechL
         </span>
       )}
       </div>
+      {/* Task #465 (2026-09-14, Amal via team-lead) — "download as
+          MP3" is on the roadmap, not built yet. Placed OUTSIDE the
+          real control bar above (not another pill jammed in next to
+          Play/speed/voice) so it never competes with genuinely working
+          controls for attention — a smaller, separately-bordered chip
+          read as "also coming, near this feature" rather than "a 5th
+          working button here." */}
+      <ComingSoonAction icon={DownloadIcon} label={t('reader.downloadMp3')} className="mt-2" />
       {voiceError && (
         <p role="alert" className="mt-2 text-[0.8125rem] text-ink-muted">
           {voiceError === 'tokenCap'
@@ -308,6 +423,6 @@ export function ReadingBuddyPlayer({ text, lang }: { text: string; lang: SpeechL
                 : t('readingBuddy.accessCodeMessage')}
         </p>
       )}
-    </div>
+    </section>
   )
 }

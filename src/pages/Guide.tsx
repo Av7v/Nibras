@@ -1,175 +1,183 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { GUIDE_CHAPTERS, type GuideChapterId } from '../content/guideSteps'
 import { GUIDE_CHAPTER_ICON } from '../components/guide/guideIcons'
-import { GuideIllustration } from '../components/guide/GuideIllustration'
-import { SpeakerButton } from '../components/techniques/SpeakerButton'
-import { useSpeakingController } from '../hooks/useSpeakingController'
-import { isAiBackendConfigured } from '../lib/aiService'
-import { ChevronIcon } from '../components/icons'
 import { focusRing } from '../lib/focus'
 
-const SPEAKING_ID = 'guide-step'
-
 /**
- * "How to use Nibras" — a creative, step-by-step interactive
- * walkthrough (Amal, 2026-08-13, via team-lead: explicitly NOT a
- * video — Nibras doesn't produce video). 6 chapters, one per main
- * feature (Reader, Reading settings, Techniques, Reading Buddy, Mind
- * Maps, AI Assistant — content in content/guideSteps.ts), 2 short
- * steps each, each with a small entrance-animated illustration
- * (GuideIllustration.tsx). "Next"/"Previous" walk linearly through the
- * WHOLE guide (crossing chapter boundaries), so someone can just keep
- * pressing Next from the very first step and see everything in order —
- * or jump straight to one feature via the picker row above.
+ * "How to use Nibras" — rebuilt 2026-09-15 (Amal, via team-lead) from a
+ * text step-by-step walkthrough into a video-first guide, now that real
+ * narrated clips exist. The feature list is no longer a text stepper —
+ * each icon is an "explainer launcher" («كل أيقونة نضغطها يجي فيديو
+ * يشرحها»): tap one and its own short explainer opens right below the
+ * grid — a video for most features, a plain-text card for the two
+ * features that have no video of their own (Library, AI Assistant).
  *
- * Calm, not just "creative": every animation is gated behind
- * `motion-safe:` (see index.css), illustrations are simple
- * icon+geometry, not busy scenes, and re-triggering an animation only
- * ever happens on a deliberate step change (keyed remount), never on
- * an interval/autoplay.
+ * A same-day follow-up (Amal, «الفيديو الأول شيله») removed the
+ * full-width overview video that originally sat above this grid — she
+ * wants ONLY the per-feature explainers, icon-click-to-video, nothing
+ * to watch before choosing a feature. `guide.videoHeading` is now
+ * unused (left in i18n — harmless); `guide.videoCaptionsLabel` is still
+ * used, by every per-feature clip's own `<track>` below.
+ *
+ * The OLD chapter/step content (title+body pairs, 2 steps per chapter,
+ * Next/Previous navigation, the entrance-animated GuideIllustration) is
+ * gone from this page. guideSteps.ts / guideIcons.tsx are kept as-is —
+ * this page now only reads their `id` + `titleKey` + icon lookup, which
+ * doubles as the feature list's source of truth (same reuse principle
+ * guideSteps.ts's own header comment describes: one shared id union,
+ * checked by `tsc -b`, so a feature can't go missing an icon silently).
  */
+
+/** How a given chapter's explainer is shown: either its own short
+ * video clip, or (for the 2 features with no clip) a plain text card.
+ * There's no standalone "Reading settings" chapter (removed 2026-09-17,
+ * Amal via team-lead): the `reader` clip already shows the same font/
+ * size/spacing/background controls live, so it covers both. */
+type GuideExplainer = { kind: 'video'; clipKey: string } | { kind: 'text'; bodyKey: string }
+
+const GUIDE_EXPLAINER: Record<GuideChapterId, GuideExplainer> = {
+  colours: { kind: 'video', clipKey: 'colours' },
+  techniques: { kind: 'video', clipKey: 'techniques' },
+  reader: { kind: 'video', clipKey: 'reader' },
+  readingBuddy: { kind: 'video', clipKey: 'readingBuddy' },
+  mindMaps: { kind: 'video', clipKey: 'mindMaps' },
+  letterSounds: { kind: 'video', clipKey: 'letterSounds' },
+  // Library works fully on-device today. AI Assistant now has its own guide
+  // video that demonstrates the feature working; the AI Assistant page itself
+  // still shows «قريبًا / coming soon» in demo mode, which is consistent —
+  // the video shows how it will work, the live page is honest that it is not
+  // switched on yet. Both are video tiles.
+  aiAssistant: { kind: 'video', clipKey: 'aiAssistant' },
+  library: { kind: 'video', clipKey: 'library' },
+  calmSpace: { kind: 'video', clipKey: 'calmness' },
+  guideMascot: { kind: 'video', clipKey: 'mascot' },
+}
+
 export function Guide() {
   const { t, i18n } = useTranslation()
-  const rtl = i18n.language === 'ar'
-  // Explicit annotation (not left to inference) — a bare ternary here
-  // has bitten this exact pattern before in this codebase (see
-  // patterns_react_architecture.md's useProfileData note): without it,
-  // TS can widen this to plain `string` once it travels anywhere, which
-  // `SpeakerButton`'s `lang: SpeechLang` prop would then reject.
-  const lang: 'en' | 'ar' = rtl ? 'ar' : 'en'
-  const [chapterId, setChapterId] = useState(GUIDE_CHAPTERS[0].id)
-  const [stepIndex, setStepIndex] = useState(0)
-  const { speakingId, preparingId, errorId, toggle, stop } = useSpeakingController()
+  // Explicit annotation (not left to inference) — see
+  // patterns_react_architecture.md's useProfileData note: without it,
+  // TS can widen this to plain `string` once it travels anywhere.
+  const lang: 'en' | 'ar' = i18n.language === 'ar' ? 'ar' : 'en'
 
-  const chapterIndex = GUIDE_CHAPTERS.findIndex((c) => c.id === chapterId)
-  const chapter = GUIDE_CHAPTERS[chapterIndex]
-  const step = chapter.steps[stepIndex]
-  const Icon = GUIDE_CHAPTER_ICON[chapter.id]
+  const [openId, setOpenId] = useState<GuideChapterId>(GUIDE_CHAPTERS[0].id)
+  // Whether the CURRENTLY selected clip, in the CURRENT language,
+  // failed to load — e.g. its file hasn't been produced/deployed yet.
+  // Reset below whenever the clip or the language changes, so a clip
+  // that lands later (or a language switch to one that already has its
+  // clip) is retried instead of staying stuck on the fallback forever.
+  const [videoFailed, setVideoFailed] = useState(false)
 
-  const isFirstOverall = chapterIndex === 0 && stepIndex === 0
-  const isLastOverall = chapterIndex === GUIDE_CHAPTERS.length - 1 && stepIndex === chapter.steps.length - 1
+  const openChapter = GUIDE_CHAPTERS.find((c) => c.id === openId) ?? GUIDE_CHAPTERS[0]
+  const OpenIcon = GUIDE_CHAPTER_ICON[openChapter.id]
+  const explainer = GUIDE_EXPLAINER[openChapter.id]
 
-  // The period between title/body gives the browser's TTS engine a
-  // natural pause between them — there's no SSML/pause markup available
-  // through the plain Web Speech API this app uses (see
-  // lib/textToSpeech.ts), so real punctuation is the only lever.
-  const speakableText = `${t(step.titleKey)}. ${t(step.bodyKey)}`
-
-  function selectChapter(id: GuideChapterId) {
-    stop()
-    setChapterId(id)
-    setStepIndex(0)
-  }
-
-  function goNext() {
-    stop()
-    if (stepIndex < chapter.steps.length - 1) {
-      setStepIndex((i) => i + 1)
-      return
-    }
-    if (chapterIndex < GUIDE_CHAPTERS.length - 1) {
-      setChapterId(GUIDE_CHAPTERS[chapterIndex + 1].id)
-      setStepIndex(0)
-    }
-  }
-
-  function goPrev() {
-    stop()
-    if (stepIndex > 0) {
-      setStepIndex((i) => i - 1)
-      return
-    }
-    if (chapterIndex > 0) {
-      const prevChapter = GUIDE_CHAPTERS[chapterIndex - 1]
-      setChapterId(prevChapter.id)
-      setStepIndex(prevChapter.steps.length - 1)
-    }
-  }
+  useEffect(() => {
+    setVideoFailed(false)
+  }, [lang, openId])
 
   return (
-    <main className="mx-auto w-full max-w-[46rem] flex-1 px-6 py-10 sm:px-10">
+    <main className="mx-auto w-full max-w-[1180px] flex-1 px-6 py-8 sm:px-10">
       <h1 className="mb-2 text-[1.75rem] font-bold text-ink">{t('guide.title')}</h1>
-      <p className="mb-8 text-[0.9375rem] text-ink-muted">{t('guide.subtitle')}</p>
+      <p className="mb-6 text-[0.9375rem] text-ink-muted">{t('guide.subtitle')}</p>
 
-      <div role="group" aria-label={t('guide.title')} className="mb-6 flex flex-wrap gap-2">
-        {GUIDE_CHAPTERS.map((c) => {
-          const ChapterIcon = GUIDE_CHAPTER_ICON[c.id]
-          return (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => selectChapter(c.id)}
-              aria-pressed={c.id === chapterId}
-              className={`inline-flex items-center gap-2 rounded-control border-[1.5px] border-line-strong bg-cream px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:border-accent hover:text-accent aria-pressed:border-accent aria-pressed:bg-accent-tint aria-pressed:text-accent ${focusRing}`}
+      <section aria-labelledby="guide-explore-heading">
+        <h2 id="guide-explore-heading" className="mb-1 text-[1.0625rem] font-bold text-ink">
+          {t('guide.exploreHeading')}
+        </h2>
+        <p className="mb-4 text-[0.875rem] text-ink-muted">{t('guide.exploreSubtitle')}</p>
+
+        {/* The feature list, kept (icons + labels) but repurposed as
+            explainer launchers (Amal, 2026-09-15) — same aria-pressed
+            toggle-button-group pattern the old chapter picker used
+            (proven accessible/RTL-safe already), just pointed at the
+            explainer panel below instead of the old step content. */}
+        <div
+          id="guide-feature-grid"
+          role="group"
+          aria-label={t('guide.exploreHeading')}
+          className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+        >
+          {GUIDE_CHAPTERS.map((c) => {
+            const ChapterIcon = GUIDE_CHAPTER_ICON[c.id]
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setOpenId(c.id)}
+                aria-pressed={c.id === openId}
+                aria-controls="guide-explainer-panel"
+                className={`flex flex-col items-center gap-2 rounded-card border-[1.5px] border-line-strong bg-card px-3 py-4 text-center text-sm font-semibold text-ink transition-colors hover:border-accent hover:text-accent aria-pressed:border-accent aria-pressed:bg-accent-tint aria-pressed:text-accent ${focusRing}`}
+              >
+                <ChapterIcon className="size-7" />
+                {t(c.titleKey)}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* aria-live="polite" so assistive-tech users hear the new
+            explainer announced without needing to tab down to it —
+            there's no separate ARIA tabs/tabpanel wiring here (this
+            page uses the simpler pressed-button-group pattern above),
+            so this is the one thing standing in for that announcement. */}
+        <div id="guide-explainer-panel" aria-live="polite" className="rounded-card border border-line bg-card p-6 sm:p-8">
+          <div className="mb-4 flex items-center gap-3">
+            <span
+              aria-hidden="true"
+              className="flex size-11 flex-none items-center justify-center rounded-control bg-accent-tint text-accent"
             >
-              <ChapterIcon className="size-4" />
-              {t(c.titleKey)}
-            </button>
-          )
-        })}
-      </div>
-
-      <div className="rounded-card border border-line bg-card p-6 sm:p-8">
-        <GuideIllustration key={`${chapterId}-${stepIndex}`} icon={Icon} flourish={step.flourish} rtl={rtl} />
-
-        <p className="mt-6 mb-1.5 text-[0.8125rem] font-bold tracking-[0.08em] text-accent uppercase">
-          {t('guide.stepLabel', { current: stepIndex + 1, total: chapter.steps.length })}
-        </p>
-
-        {/* Optional read-aloud (Amal, 2026-08-13: «نحط صوت يقرأ لهم اذا
-            حبوا») — reuses the exact same SpeakerButton + useSpeakingController
-            + useSpeechVoices path as Techniques/TechniqueDetail, not a
-            parallel system: voice availability is the SAME reactive check
-            that fixed the P0-1 cold-load bug, so this can't regress it,
-            and a language with no installed voice just shows the button's
-            own built-in disabled state (SpeakerButton already handles
-            that, nothing extra needed here). Demo-voice badge reused
-            verbatim from Reading Buddy — same underlying fact (browser
-            voice today, a real one once an AI backend is configured). */}
-        <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
-          <h2 className="m-0 flex-1 text-[1.375rem] font-bold text-ink">{t(step.titleKey)}</h2>
-          <div className="flex items-center gap-2">
-            <SpeakerButton
-              lang={lang}
-              isActive={speakingId === SPEAKING_ID}
-              isPreparing={preparingId === SPEAKING_ID}
-              onToggle={() => toggle(SPEAKING_ID, speakableText, lang)}
-              size="sm"
-            />
-            {!isAiBackendConfigured() && (
-              <span className="rounded-full bg-accent-tint px-2.5 py-1 text-[0.6875rem] font-semibold text-accent">
-                {t('readingBuddy.demoVoiceBadge')}
-              </span>
-            )}
+              <OpenIcon className="size-6" />
+            </span>
+            <h3 className="m-0 text-[1.25rem] font-bold text-ink">{t(openChapter.titleKey)}</h3>
           </div>
-        </div>
-        {errorId === SPEAKING_ID && (
-          <p role="alert" className="mb-2 text-[0.8125rem] text-ink-muted">{t('techniques.voiceUnavailable')}</p>
-        )}
-        <p className="m-0 text-[0.9375rem] leading-relaxed text-ink-muted">{t(step.bodyKey)}</p>
 
-        <div className="mt-7 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={goPrev}
-            disabled={isFirstOverall}
-            className={`inline-flex items-center gap-1.5 rounded-control border-[1.5px] border-line-strong px-4 py-2 text-sm font-semibold text-ink-muted hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
-          >
-            <ChevronIcon className="size-4 -scale-x-100 rtl:scale-x-100" />
-            {t('guide.previous')}
-          </button>
-          <button
-            type="button"
-            onClick={goNext}
-            disabled={isLastOverall}
-            className={`inline-flex items-center gap-1.5 rounded-control bg-accent px-4 py-2 text-sm font-semibold text-accent-ink hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
-          >
-            {t('guide.next')}
-            <ChevronIcon className="size-4 rtl:-scale-x-100" />
-          </button>
+          {explainer.kind === 'text' ? (
+            <p className="m-0 text-[0.9375rem] leading-relaxed text-ink-muted">{t(explainer.bodyKey)}</p>
+          ) : videoFailed ? (
+            // Honest fallback instead of a broken/blank video box — hit
+            // while this clip's file isn't deployed at this path yet
+            // (see the segments/<lang>/<key>.mp4 convention below).
+            <p className="m-0 text-[0.9375rem] text-ink-muted">{t('guide.videoUnavailable')}</p>
+          ) : (
+            <video
+              key={`${lang}-${explainer.clipKey}`}
+              controls
+              playsInline
+              poster={`/guide-videos/segments/${lang}/${explainer.clipKey}.jpg`}
+              aria-label={t(openChapter.titleKey)}
+              onError={() => setVideoFailed(true)}
+              className="aspect-video w-full rounded-control border border-line bg-cream"
+            >
+              {/* qa-review P1 (2026-09-15): a media `error` event doesn't
+                  bubble, and per the HTML resource-selection algorithm a
+                  <source> that 404s isn't guaranteed to also raise an
+                  `error` on its parent <video> once no candidate is left —
+                  a real, long-documented cross-browser gotcha, even though
+                  a direct repro against this build's Chromium DID still
+                  fire the <video> handler correctly. With 8 clips still
+                  mid-production, some WILL 404 in the wild on SOME engine,
+                  and the failure mode if this doesn't fire anywhere is a
+                  blank/broken box instead of the honest fallback text
+                  above — so listen on the <source> too as a zero-cost
+                  belt-and-suspenders: whichever element's error actually
+                  fires, the same handler still runs once. */}
+              <source
+                src={`/guide-videos/segments/${lang}/${explainer.clipKey}.mp4`}
+                type="video/mp4"
+                onError={() => setVideoFailed(true)}
+              />
+              <track
+                kind="captions"
+                src={`/guide-videos/segments/${lang}/${explainer.clipKey}.vtt`}
+                srcLang={lang}
+                label={t('guide.videoCaptionsLabel')}
+              />
+            </video>
+          )}
         </div>
-      </div>
+      </section>
     </main>
   )
 }

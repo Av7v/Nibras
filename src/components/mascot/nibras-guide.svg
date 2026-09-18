@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- مرشد نبراس — the refined animated guide mascot.
+
+     Redrawn to Amal's صورة معدلة.png. Every proportion is measured off the
+     largest lantern in that reference, normalised against LANTERN WIDTH, and
+     converted into this 96x96 viewBox. See generate.py for the table.
+
+     LEGAL: no national emblem, no crossed swords, no palm, no flag, no script.
+     The bands carry stepped حنبلية rhombi and ziggurat figures only, which is
+     documented Sadu vocabulary (Royal Decree 1393H/1973 forbids the national
+     emblem for commercial use).
+
+     DRIVING IT:
+       root.setAttribute('class', 'expr-talking mouth-a');   // or classList
+     NOT root.className -- on an SVG element that is read-only and throws.
+     Expressions: expr-idle | expr-talking | expr-warm
+     Mouths:      mouth-rest | mouth-m | mouth-e | mouth-a | mouth-o
+
+     DO NOT update aria-label or the title per mouth frame; the mascot is one
+     object to a screen reader.
+
+     NOTE for anyone extracting this markup: do not write a literal svg start
+     tag anywhere in this comment. Consumers slice the file with
+     indexOf('&lt;svg ') and would slice from inside the comment instead of the
+     real root, giving a nested duplicate root and every mouth visible at once. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96"
+     role="img" aria-labelledby="nb-t nb-d" id="nibras-guide"
+     class="expr-idle mouth-rest">
+  <title id="nb-t">مرشد نبراس — الفانوس</title>
+  <desc id="nb-d">A friendly brass lantern with plum and gold Sadu bands and a warm glowing face. فانوس نحاسي بنقش السدو ووجه دافئ.</desc>
+  <style><![CDATA[
+    /* STATE CONTRACT -- unchanged from the shipped mascot, so this file is a
+       pure drop-in. The driver sets exactly two classes on the root element:
+         one expression:  expr-idle | expr-talking | expr-warm
+         one mouth:       mouth-rest | mouth-m | mouth-e | mouth-a | mouth-o
+
+       Set them with setAttribute or classList -- NOT with .className:
+         el.setAttribute('class', 'expr-talking mouth-a');   // correct
+         el.classList.add('mouth-a');                        // correct
+         el.className = 'expr-talking mouth-a';              // THROWS
+       On an SVG element className is a read-only SVGAnimatedString.
+
+       Selectors are NOT scoped under a root id or class: every one terminates
+       in an nb- id no app element will carry, so no rule can escape this
+       mascot, and the face is correct no matter what the root is called. */
+    #nb-eyes-happy { display: none; }
+    #nb-mouth > g  { display: none; }
+
+    .mouth-rest #nb-m-rest { display: inline; }
+    .mouth-m    #nb-m-m    { display: inline; }
+    .mouth-e    #nb-m-e    { display: inline; }
+    .mouth-a    #nb-m-a    { display: inline; }
+    .mouth-o    #nb-m-o    { display: inline; }
+
+    .expr-warm #nb-eyes-open  { display: none; }
+    .expr-warm #nb-eyes-happy { display: inline; }
+    .expr-warm #nb-blush      { opacity: 1; }
+    .expr-warm.mouth-rest #nb-m-rest      { display: none; }
+    .expr-warm.mouth-rest #nb-m-smile-big { display: inline; }
+
+    .expr-talking #nb-eyes-open { transform: translateY(-0.25px); }
+
+    .blink.expr-idle #nb-eyes-open {
+      animation: nb-blink 5.4s infinite; transform-origin: 48px 54px;
+    }
+    @keyframes nb-blink {
+      0%, 92%, 100% { transform: scaleY(1); }
+      95%           { transform: scaleY(0.08); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      /* every rule here is !important, so specificity still decides; these four
+         must stay a strict ladder or two mouths show at once, or none:
+           #nb-mouth > g                          0,1,0,1
+           #nb-mouth > #nb-m-rest                 0,2,0,0
+           .expr-warm #nb-mouth > #nb-m-rest      0,2,1,0
+           .expr-warm #nb-mouth > #nb-m-smile-big 0,2,1,0 */
+      #nb-mouth > g                          { display: none !important; }
+      #nb-mouth > #nb-m-rest                 { display: inline !important; }
+      .expr-warm #nb-mouth > #nb-m-rest      { display: none !important; }
+      .expr-warm #nb-mouth > #nb-m-smile-big { display: inline !important; }
+      .blink.expr-idle #nb-eyes-open { animation: none; }
+      .expr-talking #nb-eyes-open    { transform: none; }
+    }
+  ]]></style>
+  <defs>
+    <radialGradient id="nb-gl" cx="50%" cy="42%" r="62%">
+      <stop offset="0" stop-color="#fffdf6"/>
+      <stop offset="0.30" stop-color="#fefbe7"/>
+      <stop offset="0.68" stop-color="#feeab6"/>
+      <stop offset="1" stop-color="#f7c877"/>
+    </radialGradient>
+    <radialGradient id="nb-spill" cx="50%" cy="52%" r="50%">
+      <stop offset="0" stop-color="#ffd79a" stop-opacity="0.8"/>
+      <stop offset="0.55" stop-color="#f0a952" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#ef9f42" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="nb-au" x1="0" y1="0" x2="1" y2="0.3">
+      <stop offset="0" stop-color="#82411b"/>
+      <stop offset="0.16" stop-color="#b1773c"/>
+      <stop offset="0.34" stop-color="#f5d59c"/>
+      <stop offset="0.58" stop-color="#e0b877"/>
+      <stop offset="0.78" stop-color="#b1773c"/>
+      <stop offset="1" stop-color="#82411b"/>
+    </linearGradient>
+    <linearGradient id="nb-av" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f5d59c"/>
+      <stop offset="0.42" stop-color="#d9a463"/>
+      <stop offset="1" stop-color="#82411b"/>
+    </linearGradient>
+    <linearGradient id="nb-pl" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4b2138"/>
+      <stop offset="0.55" stop-color="#3e1a2d"/>
+      <stop offset="1" stop-color="#331625"/>
+    </linearGradient>
+    <linearGradient id="nb-eye" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#452712"/>
+      <stop offset="0.42" stop-color="#290d00"/>
+      <stop offset="0.76" stop-color="#933e07"/>
+      <stop offset="1" stop-color="#ca661c"/>
+    </linearGradient>
+    <filter id="nb-sf2" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.2"/>
+    </filter>
+  </defs>
+  <ellipse cx="48.0" cy="89.80" rx="15.54" ry="1.9" fill="#2a1c22" opacity="0.16" filter="url(#nb-sf2)"/>
+  <ellipse cx="48.0" cy="56.60" rx="25.57" ry="27.54" fill="#f0a952" opacity="0.13"/>
+  <path d="M31.55 32.30 Q29.91 7.40 48.00 8.00 Q66.09 7.40 64.45 32.30" fill="none" stroke="#82411b" stroke-width="3.8" stroke-linecap="round"/>
+  <path d="M31.55 32.30 Q29.91 7.40 48.00 8.00 Q66.09 7.40 64.45 32.30" fill="none" stroke="url(#nb-au)" stroke-width="2.3" stroke-linecap="round"/>
+  <circle cx="48.0" cy="19.36" r="1.5" fill="url(#nb-av)"/>
+  <ellipse cx="48.0" cy="22.56" rx="10.03" ry="3.0" fill="url(#nb-av)"/>
+  <ellipse cx="48.0" cy="25.56" rx="12.53" ry="2.8" fill="url(#nb-au)"/>
+  <clipPath id="nb-rcl"><path d="M31.55 32.30 Q14.33 54.57 31.50 76.85 L37.90 76.85 Q20.72 54.57 37.95 32.30 Z"/></clipPath><clipPath id="nb-rcr"><path d="M64.45 32.30 Q81.67 54.57 64.50 76.85 L58.10 76.85 Q75.28 54.57 58.05 32.30 Z"/></clipPath><path d="M31.55 32.30 Q14.33 54.57 31.50 76.85 L37.90 76.85 Q20.72 54.57 37.95 32.30 Z" fill="url(#nb-pl)"/><g clip-path="url(#nb-rcl)"><path d="M29.09 36.75 L29.09 36.28 L29.73 36.28 L29.73 35.80 L30.37 35.80 L30.37 35.32 L31.01 35.32 L31.01 34.84 L31.65 34.84 L31.65 34.84 L32.29 35.32 L32.29 35.32 L32.93 35.80 L32.93 35.80 L33.57 36.28 L33.57 36.28 L34.21 36.75 L34.21 36.75 L33.57 37.23 L33.57 37.23 L32.93 37.71 L32.93 37.71 L32.29 38.19 L32.29 38.19 L31.65 38.67 L31.65 38.67 L31.01 38.19 L31.01 38.19 L30.37 37.71 L30.37 37.71 L29.73 37.23 L29.73 37.23 L29.09 36.75Z" fill="#fbefc5"/><path d="M30.17 36.75 L30.17 36.48 L30.54 36.48 L30.54 36.20 L30.91 36.20 L30.91 35.92 L31.28 35.92 L31.28 35.64 L31.65 35.64 L31.65 35.64 L32.02 35.92 L32.02 35.92 L32.39 36.20 L32.39 36.20 L32.76 36.48 L32.76 36.48 L33.13 36.75 L33.13 36.75 L32.76 37.03 L32.76 37.03 L32.39 37.31 L32.39 37.31 L32.02 37.59 L32.02 37.59 L31.65 37.87 L31.65 37.87 L31.28 37.59 L31.28 37.59 L30.91 37.31 L30.91 37.31 L30.54 37.03 L30.54 37.03 L30.17 36.75Z" fill="#3e1a2d"/><circle cx="31.65" cy="36.75" r="0.43" fill="#f5d59c"/><path d="M26.04 47.33 L26.04 46.52 L26.53 46.52 L26.53 45.71 L27.02 45.71 L27.02 44.90 L27.51 44.90 L27.51 44.90 L28.00 44.90 L28.00 45.71 L28.49 45.71 L28.49 46.52 L28.98 46.52 L28.98 47.33Z" fill="#fbefc5"/><path d="M23.57 54.57 L23.57 54.10 L24.21 54.10 L24.21 53.62 L24.85 53.62 L24.85 53.14 L25.49 53.14 L25.49 52.66 L26.13 52.66 L26.13 52.66 L26.77 53.14 L26.77 53.14 L27.41 53.62 L27.41 53.62 L28.04 54.10 L28.04 54.10 L28.68 54.57 L28.68 54.57 L28.04 55.05 L28.04 55.05 L27.41 55.53 L27.41 55.53 L26.77 56.01 L26.77 56.01 L26.13 56.49 L26.13 56.49 L25.49 56.01 L25.49 56.01 L24.85 55.53 L24.85 55.53 L24.21 55.05 L24.21 55.05 L23.57 54.57Z" fill="#fbefc5"/><path d="M24.64 54.57 L24.64 54.30 L25.01 54.30 L25.01 54.02 L25.39 54.02 L25.39 53.74 L25.76 53.74 L25.76 53.46 L26.13 53.46 L26.13 53.46 L26.50 53.74 L26.50 53.74 L26.87 54.02 L26.87 54.02 L27.24 54.30 L27.24 54.30 L27.61 54.57 L27.61 54.57 L27.24 54.85 L27.24 54.85 L26.87 55.13 L26.87 55.13 L26.50 55.41 L26.50 55.41 L26.13 55.69 L26.13 55.69 L25.76 55.41 L25.76 55.41 L25.39 55.13 L25.39 55.13 L25.01 54.85 L25.01 54.85 L24.64 54.57Z" fill="#3e1a2d"/><circle cx="26.13" cy="54.57" r="0.43" fill="#f5d59c"/><path d="M26.02 65.15 L26.02 64.34 L26.51 64.34 L26.51 63.53 L27.00 63.53 L27.00 62.72 L27.49 62.72 L27.49 62.72 L27.98 62.72 L27.98 63.53 L28.47 63.53 L28.47 64.34 L28.96 64.34 L28.96 65.15Z" fill="#fbefc5"/><path d="M29.05 72.39 L29.05 71.92 L29.69 71.92 L29.69 71.44 L30.33 71.44 L30.33 70.96 L30.97 70.96 L30.97 70.48 L31.61 70.48 L31.61 70.48 L32.25 70.96 L32.25 70.96 L32.89 71.44 L32.89 71.44 L33.53 71.92 L33.53 71.92 L34.17 72.39 L34.17 72.39 L33.53 72.87 L33.53 72.87 L32.89 73.35 L32.89 73.35 L32.25 73.83 L32.25 73.83 L31.61 74.31 L31.61 74.31 L30.97 73.83 L30.97 73.83 L30.33 73.35 L30.33 73.35 L29.69 72.87 L29.69 72.87 L29.05 72.39Z" fill="#fbefc5"/><path d="M30.13 72.39 L30.13 72.12 L30.50 72.12 L30.50 71.84 L30.87 71.84 L30.87 71.56 L31.24 71.56 L31.24 71.28 L31.61 71.28 L31.61 71.28 L31.98 71.56 L31.98 71.56 L32.35 71.84 L32.35 71.84 L32.72 72.12 L32.72 72.12 L33.09 72.39 L33.09 72.39 L32.72 72.67 L32.72 72.67 L32.35 72.95 L32.35 72.95 L31.98 73.23 L31.98 73.23 L31.61 73.51 L31.61 73.51 L31.24 73.23 L31.24 73.23 L30.87 72.95 L30.87 72.95 L30.50 72.67 L30.50 72.67 L30.13 72.39Z" fill="#3e1a2d"/><circle cx="31.61" cy="72.39" r="0.43" fill="#f5d59c"/></g><path d="M31.55 32.30 Q14.33 54.57 31.50 76.85 L37.90 76.85 Q20.72 54.57 37.95 32.30 Z" fill="none" stroke="url(#nb-au)" stroke-width="1.6"/><path d="M64.45 32.30 Q81.67 54.57 64.50 76.85 L58.10 76.85 Q75.28 54.57 58.05 32.30 Z" fill="url(#nb-pl)"/><g clip-path="url(#nb-rcr)"><path d="M61.79 36.75 L61.79 36.28 L62.43 36.28 L62.43 35.80 L63.07 35.80 L63.07 35.32 L63.71 35.32 L63.71 34.84 L64.35 34.84 L64.35 34.84 L64.99 35.32 L64.99 35.32 L65.63 35.80 L65.63 35.80 L66.27 36.28 L66.27 36.28 L66.91 36.75 L66.91 36.75 L66.27 37.23 L66.27 37.23 L65.63 37.71 L65.63 37.71 L64.99 38.19 L64.99 38.19 L64.35 38.67 L64.35 38.67 L63.71 38.19 L63.71 38.19 L63.07 37.71 L63.07 37.71 L62.43 37.23 L62.43 37.23 L61.79 36.75Z" fill="#fbefc5"/><path d="M62.87 36.75 L62.87 36.48 L63.24 36.48 L63.24 36.20 L63.61 36.20 L63.61 35.92 L63.98 35.92 L63.98 35.64 L64.35 35.64 L64.35 35.64 L64.72 35.92 L64.72 35.92 L65.09 36.20 L65.09 36.20 L65.46 36.48 L65.46 36.48 L65.83 36.75 L65.83 36.75 L65.46 37.03 L65.46 37.03 L65.09 37.31 L65.09 37.31 L64.72 37.59 L64.72 37.59 L64.35 37.87 L64.35 37.87 L63.98 37.59 L63.98 37.59 L63.61 37.31 L63.61 37.31 L63.24 37.03 L63.24 37.03 L62.87 36.75Z" fill="#3e1a2d"/><circle cx="64.35" cy="36.75" r="0.43" fill="#f5d59c"/><path d="M67.02 47.33 L67.02 46.52 L67.51 46.52 L67.51 45.71 L68.00 45.71 L68.00 44.90 L68.49 44.90 L68.49 44.90 L68.98 44.90 L68.98 45.71 L69.47 45.71 L69.47 46.52 L69.96 46.52 L69.96 47.33Z" fill="#fbefc5"/><path d="M67.32 54.57 L67.32 54.10 L67.96 54.10 L67.96 53.62 L68.59 53.62 L68.59 53.14 L69.23 53.14 L69.23 52.66 L69.87 52.66 L69.87 52.66 L70.51 53.14 L70.51 53.14 L71.15 53.62 L71.15 53.62 L71.79 54.10 L71.79 54.10 L72.43 54.57 L72.43 54.57 L71.79 55.05 L71.79 55.05 L71.15 55.53 L71.15 55.53 L70.51 56.01 L70.51 56.01 L69.87 56.49 L69.87 56.49 L69.23 56.01 L69.23 56.01 L68.59 55.53 L68.59 55.53 L67.96 55.05 L67.96 55.05 L67.32 54.57Z" fill="#fbefc5"/><path d="M68.39 54.57 L68.39 54.30 L68.76 54.30 L68.76 54.02 L69.13 54.02 L69.13 53.74 L69.50 53.74 L69.50 53.46 L69.87 53.46 L69.87 53.46 L70.24 53.74 L70.24 53.74 L70.61 54.02 L70.61 54.02 L70.99 54.30 L70.99 54.30 L71.36 54.57 L71.36 54.57 L70.99 54.85 L70.99 54.85 L70.61 55.13 L70.61 55.13 L70.24 55.41 L70.24 55.41 L69.87 55.69 L69.87 55.69 L69.50 55.41 L69.50 55.41 L69.13 55.13 L69.13 55.13 L68.76 54.85 L68.76 54.85 L68.39 54.57Z" fill="#3e1a2d"/><circle cx="69.87" cy="54.57" r="0.43" fill="#f5d59c"/><path d="M67.04 65.15 L67.04 64.34 L67.53 64.34 L67.53 63.53 L68.02 63.53 L68.02 62.72 L68.51 62.72 L68.51 62.72 L69.00 62.72 L69.00 63.53 L69.49 63.53 L69.49 64.34 L69.98 64.34 L69.98 65.15Z" fill="#fbefc5"/><path d="M61.83 72.39 L61.83 71.92 L62.47 71.92 L62.47 71.44 L63.11 71.44 L63.11 70.96 L63.75 70.96 L63.75 70.48 L64.39 70.48 L64.39 70.48 L65.03 70.96 L65.03 70.96 L65.67 71.44 L65.67 71.44 L66.31 71.92 L66.31 71.92 L66.95 72.39 L66.95 72.39 L66.31 72.87 L66.31 72.87 L65.67 73.35 L65.67 73.35 L65.03 73.83 L65.03 73.83 L64.39 74.31 L64.39 74.31 L63.75 73.83 L63.75 73.83 L63.11 73.35 L63.11 73.35 L62.47 72.87 L62.47 72.87 L61.83 72.39Z" fill="#fbefc5"/><path d="M62.91 72.39 L62.91 72.12 L63.28 72.12 L63.28 71.84 L63.65 71.84 L63.65 71.56 L64.02 71.56 L64.02 71.28 L64.39 71.28 L64.39 71.28 L64.76 71.56 L64.76 71.56 L65.13 71.84 L65.13 71.84 L65.50 72.12 L65.50 72.12 L65.87 72.39 L65.87 72.39 L65.50 72.67 L65.50 72.67 L65.13 72.95 L65.13 72.95 L64.76 73.23 L64.76 73.23 L64.39 73.51 L64.39 73.51 L64.02 73.23 L64.02 73.23 L63.65 72.95 L63.65 72.95 L63.28 72.67 L63.28 72.67 L62.91 72.39Z" fill="#3e1a2d"/><circle cx="64.39" cy="72.39" r="0.43" fill="#f5d59c"/></g><path d="M64.45 32.30 Q81.67 54.57 64.50 76.85 L58.10 76.85 Q75.28 54.57 58.05 32.30 Z" fill="none" stroke="url(#nb-au)" stroke-width="1.6"/>
+  <ellipse cx="48.0" cy="52.98" rx="16.92" ry="19.61" fill="url(#nb-spill)" filter="url(#nb-sf2)"/>
+  <ellipse cx="48.0" cy="52.98" rx="15.42" ry="18.21" fill="url(#nb-gl)"/>
+  <!-- FACE: every ratio measured off صورة معدلة.png -->
+  <g id="nb-blush">
+    <ellipse cx="38.59" cy="57.88" rx="3.77" ry="2.54" fill="#fd9f78" opacity="0.55"/>
+    <ellipse cx="57.41" cy="57.88" rx="3.77" ry="2.54" fill="#fd9f78" opacity="0.55"/>
+  </g>
+  <g id="nb-eyes-open">
+    <ellipse cx="40.84" cy="53.75" rx="4.09" ry="4.35" fill="url(#nb-eye)"/>
+    <ellipse cx="55.16" cy="53.75" rx="4.09" ry="4.35" fill="url(#nb-eye)"/>
+    <circle cx="39.61" cy="52.01" r="1.35" fill="#ffffff"/>
+    <path d="M42.23 54.04 Q42.50 55.00 43.46 55.27 Q42.50 55.54 42.23 56.50 Q41.96 55.54 41.00 55.27 Q41.96 55.00 42.23 54.04 Z" fill="#ffffff"/>
+    <circle cx="53.93" cy="52.01" r="1.35" fill="#ffffff"/>
+    <path d="M56.55 54.04 Q56.82 55.00 57.78 55.27 Q56.82 55.54 56.55 56.50 Q56.28 55.54 55.33 55.27 Q56.28 55.00 56.55 54.04 Z" fill="#ffffff"/>
+  </g>
+  <g id="nb-eyes-happy">
+    <path d="M36.44 55.05 Q40.84 49.18 45.24 55.05" fill="none" stroke="#2f1408" stroke-width="2.54" stroke-linecap="round"/>
+    <path d="M50.76 55.05 Q55.16 49.18 59.56 55.05" fill="none" stroke="#2f1408" stroke-width="2.54" stroke-linecap="round"/>
+  </g>
+  <g id="nb-mouth">
+    <g id="nb-m-rest"><path d="M44.99 57.83 Q48.00 61.43 51.01 57.83" fill="none" stroke="#5a2a10" stroke-width="1.80" stroke-linecap="round"/></g>
+    <g id="nb-m-smile-big"><path d="M44.33 57.31 Q48.00 62.36 51.67 57.31" fill="none" stroke="#5a2a10" stroke-width="1.80" stroke-linecap="round"/></g>
+    <g id="nb-m-m"><path d="M45.66 59.18 Q48.00 59.78 50.34 59.18" fill="none" stroke="#5a2a10" stroke-width="1.59" stroke-linecap="round"/></g>
+    <g id="nb-m-e"><path d="M44.84 58.43 Q48.00 57.93 51.16 58.43 Q51.16 61.55 48.00 61.55 Q44.84 61.55 44.84 58.43 Z" fill="#5a2a10"/><ellipse cx="48.00" cy="60.87" rx="1.51" ry="0.47" fill="#a8552c" opacity="0.6"/></g>
+    <g id="nb-m-a"><path d="M45.29 58.31 Q48.00 57.30 50.71 58.31 Q50.71 64.62 48.00 64.62 Q45.29 64.62 45.29 58.31 Z" fill="#5a2a10"/><ellipse cx="48.00" cy="63.23" rx="1.30" ry="0.95" fill="#a8552c" opacity="0.6"/></g>
+    <g id="nb-m-o"><path d="M46.44 58.55 Q48.00 57.78 49.56 58.55 Q49.56 63.36 48.00 63.36 Q46.44 63.36 46.44 58.55 Z" fill="#5a2a10"/><ellipse cx="48.00" cy="62.30" rx="0.75" ry="0.72" fill="#a8552c" opacity="0.6"/></g>
+  </g>
+  <ellipse cx="48.0" cy="52.98" rx="15.42" ry="18.21" fill="none" stroke="#82411b" stroke-width="2.4"/>
+  <ellipse cx="48.0" cy="52.98" rx="15.42" ry="18.21" fill="none" stroke="url(#nb-au)" stroke-width="1.3"/>
+  <path d="M38.44 41.68 Q33.82 51.16 36.90 60.63" fill="none" stroke="#fffdf4" stroke-width="1.6" opacity="0.5" stroke-linecap="round"/>
+  <rect x="36.22" y="27.76" width="23.57" height="6.40" fill="url(#nb-pl)"/><rect x="36.22" y="27.76" width="23.57" height="0.70" fill="#f5d59c" opacity="0.85"/><rect x="36.22" y="33.46" width="23.57" height="0.70" fill="#f5d59c" opacity="0.85"/><path d="M44.03 30.96 L44.03 30.32 L45.02 30.32 L45.02 29.68 L46.02 29.68 L46.02 29.04 L47.01 29.04 L47.01 28.40 L48.00 28.40 L48.00 28.40 L48.99 29.04 L48.99 29.04 L49.98 29.68 L49.98 29.68 L50.98 30.32 L50.98 30.32 L51.97 30.96 L51.97 30.96 L50.98 31.60 L50.98 31.60 L49.98 32.24 L49.98 32.24 L48.99 32.88 L48.99 32.88 L48.00 33.52 L48.00 33.52 L47.01 32.88 L47.01 32.88 L46.02 32.24 L46.02 32.24 L45.02 31.60 L45.02 31.60 L44.03 30.96Z" fill="#fbefc5"/><path d="M45.70 30.96 L45.70 30.59 L46.27 30.59 L46.27 30.22 L46.85 30.22 L46.85 29.85 L47.42 29.85 L47.42 29.48 L48.00 29.48 L48.00 29.48 L48.58 29.85 L48.58 29.85 L49.15 30.22 L49.15 30.22 L49.73 30.59 L49.73 30.59 L50.30 30.96 L50.30 30.96 L49.73 31.33 L49.73 31.33 L49.15 31.71 L49.15 31.71 L48.58 32.08 L48.58 32.08 L48.00 32.45 L48.00 32.45 L47.42 32.08 L47.42 32.08 L46.85 31.71 L46.85 31.71 L46.27 31.33 L46.27 31.33 L45.70 30.96Z" fill="#3e1a2d"/><circle cx="48.00" cy="30.96" r="0.67" fill="#f5d59c"/><path d="M37.76 33.01 L37.76 31.90 L38.40 31.90 L38.40 30.79 L39.04 30.79 L39.04 29.68 L39.68 29.68 L39.68 29.68 L40.32 29.68 L40.32 30.79 L40.96 30.79 L40.96 31.90 L41.60 31.90 L41.60 33.01Z" fill="#fbefc5"/><path d="M33.41 33.01 L33.41 32.16 L33.90 32.16 L33.90 31.30 L34.39 31.30 L34.39 30.45 L34.88 30.45 L34.88 30.45 L35.37 30.45 L35.37 31.30 L35.86 31.30 L35.86 32.16 L36.35 32.16 L36.35 33.01Z" fill="#fbefc5"/><path d="M54.40 33.01 L54.40 31.90 L55.04 31.90 L55.04 30.79 L55.68 30.79 L55.68 29.68 L56.32 29.68 L56.32 29.68 L56.96 29.68 L56.96 30.79 L57.60 30.79 L57.60 31.90 L58.24 31.90 L58.24 33.01Z" fill="#fbefc5"/><path d="M59.65 33.01 L59.65 32.16 L60.14 32.16 L60.14 31.30 L60.63 31.30 L60.63 30.45 L61.12 30.45 L61.12 30.45 L61.61 30.45 L61.61 31.30 L62.10 31.30 L62.10 32.16 L62.59 32.16 L62.59 33.01Z" fill="#fbefc5"/>
+  <ellipse cx="48.0" cy="34.66" rx="12.28" ry="1.8" fill="url(#nb-au)"/>
+  <ellipse cx="48.0" cy="71.39" rx="14.54" ry="2.3" fill="url(#nb-av)"/>
+  <rect x="32.46" y="71.99" width="31.09" height="6.40" fill="url(#nb-pl)"/><rect x="32.46" y="71.99" width="31.09" height="0.70" fill="#f5d59c" opacity="0.85"/><rect x="32.46" y="77.69" width="31.09" height="0.70" fill="#f5d59c" opacity="0.85"/><path d="M43.52 75.19 L43.52 74.49 L44.64 74.49 L44.64 73.78 L45.76 73.78 L45.76 73.08 L46.88 73.08 L46.88 72.37 L48.00 72.37 L48.00 72.37 L49.12 73.08 L49.12 73.08 L50.24 73.78 L50.24 73.78 L51.36 74.49 L51.36 74.49 L52.48 75.19 L52.48 75.19 L51.36 75.89 L51.36 75.89 L50.24 76.60 L50.24 76.60 L49.12 77.30 L49.12 77.30 L48.00 78.01 L48.00 78.01 L46.88 77.30 L46.88 77.30 L45.76 76.60 L45.76 76.60 L44.64 75.89 L44.64 75.89 L43.52 75.19Z" fill="#fbefc5"/><path d="M45.40 75.19 L45.40 74.78 L46.05 74.78 L46.05 74.37 L46.70 74.37 L46.70 73.96 L47.35 73.96 L47.35 73.56 L48.00 73.56 L48.00 73.56 L48.65 73.96 L48.65 73.96 L49.30 74.37 L49.30 74.37 L49.95 74.78 L49.95 74.78 L50.60 75.19 L50.60 75.19 L49.95 75.60 L49.95 75.60 L49.30 76.01 L49.30 76.01 L48.65 76.41 L48.65 76.41 L48.00 76.82 L48.00 76.82 L47.35 76.41 L47.35 76.41 L46.70 76.01 L46.70 76.01 L46.05 75.60 L46.05 75.60 L45.40 75.19Z" fill="#3e1a2d"/><circle cx="48.00" cy="75.19" r="0.76" fill="#f5d59c"/><path d="M36.48 77.37 L36.48 76.17 L37.23 76.17 L37.23 74.98 L37.97 74.98 L37.97 73.78 L38.72 73.78 L38.72 73.78 L39.47 73.78 L39.47 74.98 L40.21 74.98 L40.21 76.17 L40.96 76.17 L40.96 77.37Z" fill="#fbefc5"/><path d="M29.76 75.19 L29.76 74.59 L30.62 74.59 L30.62 74.00 L31.47 74.00 L31.47 73.40 L32.32 73.40 L32.32 73.40 L33.18 74.00 L33.18 74.00 L34.03 74.59 L34.03 74.59 L34.88 75.19 L34.88 75.19 L34.03 75.79 L34.03 75.79 L33.18 76.38 L33.18 76.38 L32.32 76.98 L32.32 76.98 L31.47 76.38 L31.47 76.38 L30.62 75.79 L30.62 75.79 L29.76 75.19Z" fill="#fbefc5"/><path d="M30.84 75.19 L30.84 74.84 L31.33 74.84 L31.33 74.50 L31.83 74.50 L31.83 74.15 L32.32 74.15 L32.32 74.15 L32.82 74.50 L32.82 74.50 L33.31 74.84 L33.31 74.84 L33.81 75.19 L33.81 75.19 L33.31 75.54 L33.31 75.54 L32.82 75.88 L32.82 75.88 L32.32 76.23 L32.32 76.23 L31.83 75.88 L31.83 75.88 L31.33 75.54 L31.33 75.54 L30.84 75.19Z" fill="#3e1a2d"/><circle cx="32.32" cy="75.19" r="0.44" fill="#f5d59c"/><path d="M55.04 77.37 L55.04 76.17 L55.79 76.17 L55.79 74.98 L56.53 74.98 L56.53 73.78 L57.28 73.78 L57.28 73.78 L58.03 73.78 L58.03 74.98 L58.77 74.98 L58.77 76.17 L59.52 76.17 L59.52 77.37Z" fill="#fbefc5"/><path d="M61.12 75.19 L61.12 74.59 L61.97 74.59 L61.97 74.00 L62.82 74.00 L62.82 73.40 L63.68 73.40 L63.68 73.40 L64.53 74.00 L64.53 74.00 L65.38 74.59 L65.38 74.59 L66.24 75.19 L66.24 75.19 L65.38 75.79 L65.38 75.79 L64.53 76.38 L64.53 76.38 L63.68 76.98 L63.68 76.98 L62.82 76.38 L62.82 76.38 L61.97 75.79 L61.97 75.79 L61.12 75.19Z" fill="#fbefc5"/><path d="M62.19 75.19 L62.19 74.84 L62.69 74.84 L62.69 74.50 L63.18 74.50 L63.18 74.15 L63.68 74.15 L63.68 74.15 L64.17 74.50 L64.17 74.50 L64.67 74.84 L64.67 74.84 L65.16 75.19 L65.16 75.19 L64.67 75.54 L64.67 75.54 L64.17 75.88 L64.17 75.88 L63.68 76.23 L63.68 76.23 L63.18 75.88 L63.18 75.88 L62.69 75.54 L62.69 75.54 L62.19 75.19Z" fill="#3e1a2d"/><circle cx="63.68" cy="75.19" r="0.44" fill="#f5d59c"/>
+  <ellipse cx="48.0" cy="79.59" rx="17.55" ry="2.2" fill="url(#nb-av)"/>
+  <path d="M32.46 78.79 C27.44 80.19 29.45 83.41 34.96 83.41 L61.04 83.41 C66.55 83.41 68.56 80.19 63.54 78.79 Z" fill="url(#nb-av)"/>
+  <ellipse cx="48.0" cy="83.41" rx="13.54" ry="1.5" fill="url(#nb-au)"/>
+</svg>

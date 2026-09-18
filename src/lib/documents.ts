@@ -4,7 +4,9 @@
  *
  * A document is a list of `sections` — pages for a PDF (pdf.js's own
  * page boundaries), chapters for an EPUB (the EPUB's own spine order),
- * or artificial chunks for pasted/plain-text (see lib/textChunking.ts).
+ * or artificial chunks for pasted/plain-text/Word (see
+ * lib/textChunking.ts) — a .docx, unlike a PDF page or an EPUB
+ * chapter, has no comparable built-in navigation unit of its own.
  * Using each format's *natural* unit means "Next"/"Prev" always lines
  * up with how that content is actually structured, instead of forcing
  * one generic pagination scheme onto everything.
@@ -17,7 +19,7 @@
  * whole book that no longer renders as one block.
  */
 
-export type SourceType = 'pasted' | 'txt' | 'pdf' | 'epub' | 'example'
+export type SourceType = 'pasted' | 'txt' | 'pdf' | 'epub' | 'docx' | 'example'
 
 export interface DocumentSection {
   title?: string
@@ -66,6 +68,20 @@ export interface ReaderDocument {
    * organizational action, not "you just read this," so it must never
    * make an untouched book look like recent reading activity. */
   folderId?: string
+  /** Set only for sourceType 'example' — the shared `id` from
+   * content/exampleTexts.ts's ExampleText (e.g. 'reading'), NOT this
+   * document's own hash-based `id` above. The English and Arabic
+   * members of one example pair are otherwise two completely unrelated
+   * documents (their `hashSections` ids are computed from their own,
+   * totally different, text) — this is the ONLY link between them, and
+   * it's what Reader.tsx's language-switch effect uses to jump straight
+   * to the SAME example's other-language sibling, for free, with no AI
+   * call and no risk of ever popping the access gate (2026-09-15,
+   * live-preview interactive-audit fix). Absent on every other
+   * sourceType and on any example-shaped document saved before this
+   * field existed — both read as "no known sibling," which is exactly
+   * correct for content that never had one to begin with. */
+  exampleId?: string
 }
 
 export interface DocumentsState {

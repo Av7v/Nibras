@@ -4,12 +4,14 @@ import { useDocuments } from './useDocuments'
 import { useReadingSettings } from './useReadingSettings'
 import type { ReaderDocument, SourceType } from '../lib/documents'
 import { ARABIC_TYPEFACE_LABEL_KEY, LATIN_TYPEFACE_LABEL_KEY, TINT_LABEL_KEY } from '../lib/readingSettings'
+import { isolateLtr } from '../lib/bidi'
 
 export const SOURCE_LABEL_KEY: Record<SourceType, string> = {
   pasted: 'profile.sourcePasted',
   txt: 'profile.sourceTxt',
   pdf: 'profile.sourcePdf',
   epub: 'profile.sourceEpub',
+  docx: 'profile.sourceDocx', // Task #465 — Word (.docx) import
   example: 'profile.sourceExample',
 }
 
@@ -76,9 +78,13 @@ export function useProfileData() {
   )
   const settingsSummary = t('reader.metaTemplate', {
     typeface: typefaceLabel,
-    size: activeSettings.fontSize,
-    lineHeight: activeSettings.lineHeight.toFixed(1),
-    tint: t(TINT_LABEL_KEY[activeSettings.tint]),
+    size: isolateLtr(`${activeSettings.fontSize}px`),
+    lineHeight: isolateLtr(activeSettings.lineHeight.toFixed(1)),
+    // #364 — a custom (wheel-picked) background has no preset name, same
+    // fallback Reader.tsx's own metaText already uses, so this summary
+    // never shows a stale tint name once the reader has picked a custom
+    // colour from the wheel.
+    tint: activeSettings.backgroundColor ? t('settings.bgColorCustom') : t(TINT_LABEL_KEY[activeSettings.tint]),
   })
 
   // Bookmarks + notes roll-up across every saved document, newest

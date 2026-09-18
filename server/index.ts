@@ -80,6 +80,8 @@ import { handleSttRequest } from './api/stt.ts'
 import { handleSummarizeRequest } from './api/summarize.ts'
 import { handleExplainRequest } from './api/explain.ts'
 import { handleTranslateRequest } from './api/translate.ts'
+import { handleAskRequest, MAX_QUESTION_CHARS } from './api/ask.ts'
+import { isAskPageId, getAskContext, type AskPageId } from './api/_askContext.ts'
 import { normalizeSttMime } from './api/_xaiStt.ts'
 import type { XaiTtsRequest } from './api/_xaiTts.ts'
 import { createAccessControl, parseAccessTokens } from './api/_accessControl.ts'
@@ -148,7 +150,29 @@ const accessControl = createAccessControl(parseAccessTokens(process.env.AI_ACCES
 const PER_TOKEN_CAP_USD = numEnv('PER_TOKEN_CAP_USD', 1.5)
 const GLOBAL_CAP_USD = numEnv('GLOBAL_CAP_USD', 10)
 const USAGE_FILE = process.env.USAGE_FILE || fileURLToPath(new URL('./.usage/usage.json', import.meta.url))
-const spendCap = createSpendCap({ perTokenCapUsd: PER_TOKEN_CAP_USD, globalCapUsd: GLOBAL_CAP_USD, usageFile: USAGE_FILE })
+
+// 2026-09-15 (Amal-approved, via team-lead, task #537): the internal
+// token used to PRODUCE the guide videos hit its own $1.50 cap after 237
+// real TTS calls, blocking 3 held audio regens. Amal approved a generous
+// cap for THIS one non-volunteer, dev/production token — CRITICAL: the
+// $1.50 PER_TOKEN_CAP_USD default above is untouched, so every volunteer
+// / committee code is still governed by exactly the same protective
+// limit it always was. The override is keyed by the token's SHA-256 hash
+// (`AI_PRODUCTION_TOKEN_HASH`, non-secret — it's a one-way hash, the same
+// kind the ledger itself already stores in plaintext), never the raw
+// token, so no credential needs to live in a second place. Unset (as it
+// MUST be before real go-live — see #526/#435) => `perTokenCapOverridesUsd`
+// is undefined => byte-identical to pre-#537 behaviour.
+const PRODUCTION_TOKEN_CAP_USD = numEnv('PRODUCTION_TOKEN_CAP_USD', 10)
+const productionTokenHash = process.env.AI_PRODUCTION_TOKEN_HASH
+const perTokenCapOverridesUsd = productionTokenHash ? { [productionTokenHash]: PRODUCTION_TOKEN_CAP_USD } : undefined
+
+const spendCap = createSpendCap({
+  perTokenCapUsd: PER_TOKEN_CAP_USD,
+  globalCapUsd: GLOBAL_CAP_USD,
+  usageFile: USAGE_FILE,
+  perTokenCapOverridesUsd,
+})
 
 // Rate limiter: fixed window per client. Keyed on the correctly derived
 // client IP (clientIpConfig below), not the raw socket peer, so it stays
@@ -282,6 +306,22 @@ function validateTextLangRequest(body: unknown): { text: string; lang: 'en' | 'a
   return { text: b.text, lang: b.lang }
 }
 
+/** `/ask` request: a validated pageId (must be in the server-owned
+ * _askContext allowlist — an unknown page is refused rather than answered
+ * from empty context, task #369) + the reader's free-text question + the
+ * page language. The question is UNTRUSTED (see ask.ts's prompt-injection
+ * note); it is length-capped here and the model is told to treat it as
+ * data, not instructions. */
+function validateAskRequest(body: unknown): { pageId: AskPageId; question: string; lang: 'en' | 'ar' } {
+  if (typeof body !== 'object' || body === null) throw new HttpError(400, 'Body must be a JSON object')
+  const b = body as Record<string, unknown>
+  if (!isAskPageId(b.pageId)) throw new HttpError(400, '"pageId" is not a known Nibras page')
+  if (typeof b.question !== 'string' || b.question.trim() === '') throw new HttpError(400, '"question" must be a non-empty string')
+  if (b.question.length > MAX_QUESTION_CHARS) throw new HttpError(413, `"question" exceeds ${MAX_QUESTION_CHARS} characters`)
+  if (b.lang !== 'en' && b.lang !== 'ar') throw new HttpError(400, '"lang" must be "en" or "ar"')
+  return { pageId: b.pageId, question: b.question, lang: b.lang }
+}
+
 function validateTranslateRequest(body: unknown): { text: string; from: 'en' | 'ar'; to: 'en' | 'ar' } {
   if (typeof body !== 'object' || body === null) throw new HttpError(400, 'Body must be a JSON object')
   const b = body as Record<string, unknown>
@@ -374,7 +414,7 @@ async function serveStaticClient(req: IncomingMessage, res: ServerResponse): Pro
 // body-handling pipeline below; only request validation + the actual
 // handler differ per route (see the dispatch at the bottom of the
 // try block).
-const ROUTES = new Set(['/voice', '/mindmap', '/stt', '/summarize', '/explain', '/translate'])
+const ROUTES = new Set(['/voice', '/mindmap', '/stt', '/summarize', '/explain', '/translate', '/ask'])
 
 const server = createServer(async (req, res) => {
   const startedAt = Date.now()
@@ -396,14 +436,14 @@ const server = createServer(async (req, res) => {
       if (req.method === 'GET' || req.method === 'HEAD') {
         await serveStaticClient(req, res)
       } else {
-        sendJson(res, 404, { error: 'Not found — only POST /voice, /mindmap, /stt, /summarize, /explain, /translate are implemented' })
+        sendJson(res, 404, { error: 'Not found — only POST /voice, /mindmap, /stt, /summarize, /explain, /translate, /ask are implemented' })
       }
       return
     }
 
     // API path (in the allowlist): POST-only, then the guard pipeline below.
     if (req.method !== 'POST') {
-      sendJson(res, 405, { error: 'Not found — only POST /voice, /mindmap, /stt, /summarize, /explain, /translate are implemented' })
+      sendJson(res, 405, { error: 'Not found — only POST /voice, /mindmap, /stt, /summarize, /explain, /translate, /ask are implemented' })
       return
     }
 
@@ -513,6 +553,21 @@ const server = createServer(async (req, res) => {
       const { response, usage } = await handleExplainRequest(expReq)
       spendCap.record(tokenId, usage ? actualChatCostUsd(usage.promptTokens, usage.completionTokens, usage.reasoningTokens) : estCost)
       sendJson(res, 200, response)
+    } else if (req.url === '/ask') {
+      // /ask — the mascot's grounded page Q&A (#369). Same chat pattern:
+      // estimate on (server-owned page context + the question), gate, call,
+      // then true up to the exact cost incl. reasoning tokens. The context
+      // is server-owned (validated pageId), never client-supplied.
+      const askReq = validateAskRequest(body)
+      const estCost = estimateChatCostUsd(askReq.question.length + getAskContext(askReq.pageId).facts.length)
+      const blocked = spendCap.checkAllowed(tokenId, estCost)
+      if (blocked) {
+        sendSpendCapError(res, blocked)
+        return
+      }
+      const { response, usage } = await handleAskRequest(askReq)
+      spendCap.record(tokenId, usage ? actualChatCostUsd(usage.promptTokens, usage.completionTokens, usage.reasoningTokens) : estCost)
+      sendJson(res, 200, response)
     } else {
       // /translate — reader auto-translate (#112), request shape {text, from, to}.
       const trReq = validateTranslateRequest(body)
@@ -545,7 +600,9 @@ const server = createServer(async (req, res) => {
           ? 'Voice synthesis is temporarily unavailable. Please try again.'
           : req.url === '/stt'
             ? 'Transcription is temporarily unavailable. Please try again.'
-            : 'Mind map generation is temporarily unavailable. Please try again.'
+            : req.url === '/mindmap'
+              ? 'Mind map generation is temporarily unavailable. Please try again.'
+              : 'The AI service is temporarily unavailable. Please try again.'
       sendJson(res, 502, { error: genericMessage })
     }
   } finally {
@@ -558,7 +615,7 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, HOST, () => {
   const publicBind = HOST === '0.0.0.0' || HOST === '::' // the all-interfaces binds (network-reachable); a loopback/specific host is not
   console.log(`Nibras AI backend listening on http://${HOST}:${PORT} (${publicBind ? 'PUBLIC bind, reachable from the network' : 'loopback only, not reachable from the network'})`)
-  console.log('Routes: POST /voice, /mindmap, /stt, /summarize, /explain, /translate. Non-API GETs serve the built client (dist/) when present.')
+  console.log('Routes: POST /voice, /mindmap, /stt, /summarize, /explain, /translate, /ask. Non-API GETs serve the built client (dist/) when present.')
   if (!process.env.AI_VOICE_API_KEY) {
     console.log('WARNING: AI_VOICE_API_KEY is not set in this process — every /voice, /mindmap and /stt call will fail. Run with --env-file=server/.env (see server/README.md).')
   }

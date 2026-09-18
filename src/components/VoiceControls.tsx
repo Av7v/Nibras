@@ -76,9 +76,17 @@ export function SpeedField({
       className="inline-flex flex-none overflow-hidden rounded-full border-[1.5px] border-line-strong"
     >
       {options.map((r) => (
+        // dir="ltr" (task #398 review, RTL bidi audit, 2026-09-14): "1.25×"
+        // has a trailing neutral '×' with no strong-direction character
+        // anywhere in the token, so under ambient RTL it painted reversed
+        // as "×1.25" — same class of bug as the hex-input fix (FIX 2),
+        // confirmed by comparing this button's own DOM textContent
+        // ("1.25×", correct) against its rendered pixels (reversed)
+        // before this attribute was added.
         <button
           key={r}
           type="button"
+          dir="ltr"
           aria-pressed={value === r}
           onClick={() => onChange(r)}
           className={`px-2.5 py-1.5 text-[0.75rem] font-semibold text-ink-muted aria-pressed:bg-accent aria-pressed:text-accent-ink ${focusRingInset}`}

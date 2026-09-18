@@ -25,10 +25,11 @@ async function parseTxt(file: File): Promise<{ title?: string; sections: Documen
  * the document AND each individual section with its own detected
  * language (see detectLanguage.ts) — a document is mostly one script,
  * but a section quoting the other one still renders correctly instead
- * of being forced into whichever script dominates the rest. The PDF
- * and EPUB parsers are dynamically imported *inside* their own
- * modules, so this function — and importing it — doesn't pull either
- * library into the main bundle; only opening that file type does. */
+ * of being forced into whichever script dominates the rest. The PDF,
+ * EPUB, and Word parsers are dynamically imported *inside* their own
+ * modules, so this function — and importing it — doesn't pull any of
+ * those libraries into the main bundle; only opening that file type
+ * does. */
 export async function parseFile(file: File, uiLanguageFallback: 'en' | 'ar'): Promise<ParsedFile> {
   const name = file.name.toLowerCase()
 
@@ -44,12 +45,21 @@ export async function parseFile(file: File, uiLanguageFallback: 'en' | 'ar'): Pr
     return finalize(result, 'epub', uiLanguageFallback, result.lang)
   }
 
+  if (
+    name.endsWith('.docx') ||
+    file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ) {
+    const { parseDocx } = await import('./docx')
+    const result = await parseDocx(file)
+    return finalize(result, 'docx', uiLanguageFallback)
+  }
+
   if (name.endsWith('.txt') || file.type === 'text/plain') {
     const result = await parseTxt(file)
     return finalize(result, 'txt', uiLanguageFallback)
   }
 
-  throw new Error('Please choose a PDF, EPUB, or .txt file.')
+  throw new Error('Please choose a PDF, EPUB, Word, or .txt file.')
 }
 
 function finalize(
