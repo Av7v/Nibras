@@ -138,6 +138,37 @@ export const PRIVACY_SECTIONS: PrivacySection[] = [
         'لا يُرسَل أي من ذلك إلى خادم؛ فنبراس لا يملك خادمًا أصلًا. وإذا استخدمت جهازًا أو متصفحًا مختلفًا، فلن تنتقل هذه البيانات معك تلقائيًا، لأنه لا يوجد تخزين مركزي لها.',
       ],
     },
+    // REAL-AI + feedback variant (AI-ON + Rate Nibras go-live, 2026-09-23):
+    // the demo claim above ("None of this is sent to a server. Nibras
+    // doesn't have one") goes FALSE the instant a backend is configured.
+    // isAiBackendConfigured() true means BOTH (a) the AI features POST to
+    // that backend AND (b) lib/feedbackService.ts's submitFeedback() reaches
+    // the SAME backend's /feedback route — both keyed off VITE_AI_BACKEND_URL
+    // via aiService.ts's backendUrl(). In a demo build (no backend)
+    // submitFeedback() THROWS and nothing is sent, so the demo copy above is
+    // still accurate and is deliberately left unchanged. The on-device claim
+    // itself stays TRUE (settings/documents/bookmarks/notes remain in
+    // localStorage and are never sent), so this variant SCOPES the server
+    // sentence rather than dropping it, and adds the voluntary-feedback
+    // disclosure as its own paragraph (its rating + optional note + page +
+    // lang, none of it identity-bound — confirmed against feedbackService.ts
+    // + server/api/feedback.ts).
+    enReal: {
+      heading: 'What Nibras saves, and where',
+      body: [
+        "To make the app work the way you like every time you return, Nibras saves a few things directly in your browser's local storage on your device: your reading preferences (font, size, spacing, background), the documents you've opened (so you can resume where you left off) and any folders you organise them into, any bookmarks or notes you add, and any notes or edits you make to a mind map.",
+        "None of this is sent to a server. It stays in your browser, on your device. Nibras does run a server for its AI features, but none of those saved items are sent to it. If you use a different device or browser, these won't follow you there automatically, because nothing is stored centrally.",
+        "Nibras also includes an optional feature called 'Rate Nibras'. If you choose to use it, the rating you pick and any note you write are sent to that same server, so we can improve the app. Sending this feedback is entirely voluntary, and is never required to use Nibras. It includes only what you enter there, along with which page you were on and the language you were using, and it never asks who you are.",
+      ],
+    },
+    arReal: {
+      heading: 'ما يحفظه نبراس، وأين',
+      body: [
+        'لكي يعمل التطبيق بالطريقة التي تفضّلها في كل مرة تعود فيها، يحفظ نبراس بعض الأشياء مباشرة في التخزين المحلي لمتصفحك على جهازك: تفضيلات القراءة (الخط، الحجم، التباعد، لون الخلفية)، والمستندات التي فتحتها (لتتمكن من متابعة القراءة من حيث توقفت) وأي مجلدات ترتّبها فيها، وأي إشارات مرجعية أو ملاحظات تضيفها، وأي ملاحظات أو تعديلات تجريها على خريطة ذهنية.',
+        'لا يُرسَل أي من ذلك إلى خادم؛ بل يبقى في متصفحك على جهازك. ويشغّل نبراس خادمًا لميزات الذكاء الاصطناعي، لكن لا يُرسَل إليه أي من تلك الأشياء المحفوظة على جهازك. وإذا استخدمت جهازًا أو متصفحًا مختلفًا، فلن تنتقل هذه البيانات معك تلقائيًا، لأنه لا يوجد تخزين مركزي لها.',
+        'ويضمّ نبراس أيضًا ميزة اختيارية اسمها «قيّم نبراس». فإذا اخترت استخدامها، يُرسَل التقييم الذي تختاره وأي ملاحظة تكتبها إلى الخادم نفسه، لكي نحسّن التطبيق. وإرسال هذه الملاحظات اختياري تمامًا، وليس شرطًا لاستخدام نبراس. ولا يتضمّن ما يُرسَل إلا ما تُدخله، إضافةً إلى الصفحة التي كنت فيها واللغة التي كنت تستخدمها، ولا يسألك نبراس عن هويتك.',
+      ],
+    },
   },
   {
     id: 'files',
@@ -318,6 +349,36 @@ export const PRIVACY_SECTIONS: PrivacySection[] = [
       body: [
         'قد تكشف المعلومات المتعلقة بعُسر القراءة جانبًا شخصيًا عنك. نأخذ هذا الأمر على محمل الجد: بُني نبراس على مبدأ جمع أقل قدر ممكن من البيانات، والاحتفاظ بما يتبقى منها على جهازك فقط، وعدم سؤالك عن هويتك إطلاقًا.',
         'هذا النهج متوافق عمدًا مع المبادئ التي تقوم عليها أبرز أنظمة حماية البيانات، مثل اللائحة الأوروبية العامة لحماية البيانات (GDPR) ونظيرتها البريطانية، ونظام حماية البيانات الشخصية السعودي (PDPL). ومع ذلك، فإن كثيرًا من آلياتها الرسمية (كتقديم طلب للوصول إلى البيانات) لا تنطبق عمليًا على طريقة عمل نبراس حاليًا، لأننا لا نُشغّل خوادم تعالج بياناتك الشخصية.',
+      ],
+    },
+    // REAL-AI + feedback variant (AI-ON + Rate Nibras go-live, 2026-09-23):
+    // the demo tail above ("because we don't operate servers that process
+    // your personal data") goes FALSE once a backend is configured — the AI
+    // features process your text server-side (ephemerally) and the /feedback
+    // route records the feedback you volunteer. The section's actual POINT
+    // still holds: with no accounts and no identity ever asked, nothing is
+    // tied to a specific person, so the formal data-subject mechanisms still
+    // don't map onto how Nibras works. This variant re-grounds that reason on
+    // "nothing is identifiable" instead of "no servers".
+    // NOTE — FLAG for Amal: body[0] also softens "keeping what little exists
+    // on your own device" -> "keeping it on your own device by default" (EN)
+    // and «على جهازك فقط» -> «على جهازك افتراضيًا» (AR), because volunteered
+    // feedback is the one thing kept off-device, so the absolute "only" would
+    // now slightly overclaim. Revert body[0] to the demo wording if a lighter
+    // touch is preferred; it does not affect the two load-bearing fixes.
+    enReal: {
+      heading: 'A sensitive category, handled carefully',
+      body: [
+        'Dyslexia-related information can reveal something personal about you. We take that seriously: Nibras is built around collecting as little as possible, keeping it on your own device by default, and never asking who you are.',
+        "This approach is intentionally aligned with the principles behind major privacy regulations, including the EU's GDPR, the UK GDPR, and Saudi Arabia's Personal Data Protection Law (PDPL).",
+        "Even so, Nibras still has no accounts and never asks who you are, so nothing it handles is tied to your identity. The text you send to its AI features is used only to generate your result, then discarded, and any feedback you choose to send is not linked to who you are either. Because none of it identifies you, many of their formal mechanisms (like submitting a data-access request) still don't map neatly onto how Nibras works.",
+      ],
+    },
+    arReal: {
+      heading: 'فئة حسّاسة، نتعامل معها بعناية',
+      body: [
+        'قد تكشف المعلومات المتعلقة بعُسر القراءة جانبًا شخصيًا عنك. نأخذ هذا الأمر على محمل الجد: بُني نبراس على مبدأ جمع أقل قدر ممكن من البيانات، والاحتفاظ بما يتبقى منها على جهازك افتراضيًا، وعدم سؤالك عن هويتك إطلاقًا.',
+        'هذا النهج متوافق عمدًا مع المبادئ التي تقوم عليها أبرز أنظمة حماية البيانات، مثل اللائحة الأوروبية العامة لحماية البيانات (GDPR) ونظيرتها البريطانية، ونظام حماية البيانات الشخصية السعودي (PDPL). ومع ذلك، فإن نبراس لا يزال بلا حسابات ولا يسألك عن هويتك، فلا شيء مما يعالجه مرتبط بهويتك: فالنص الذي ترسله إلى ميزات الذكاء الاصطناعي يُستخدم لتوليد نتيجتك فحسب ثم يُحذف، والملاحظات التي تختار إرسالها غير مرتبطة بهويتك كذلك. ولأن أيًّا من ذلك لا يحدّد هويتك، فإن كثيرًا من آلياتها الرسمية (كتقديم طلب للوصول إلى البيانات) لا تنطبق عمليًا على طريقة عمل نبراس.',
       ],
     },
   },

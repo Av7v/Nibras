@@ -55,5 +55,10 @@ public/ort/
 # server/index.ts's spend cap, not source. Never committed.
 server/.usage/
 
+# "Rate Nibras" feedback log — best-effort JSON-lines written by
+# server/api/feedback.ts (console.info is the reliable channel). Ephemeral
+# machine/container-local state, not source. Never committed.
+server/.feedback/
+
 # Claude Code workspace state (never ship)
 .claude/

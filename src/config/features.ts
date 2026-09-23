@@ -45,29 +45,21 @@ export const ARABIC_LISTENING_ENABLED = false
 
 // "Rate Nibras" feedback (faces rating + an optional free-text
 // suggestion box, src/components/RateNibras.tsx) — Amal approved the
-// FEATURE itself (2026-09-21, via team-lead): build it now. Left OFF
-// by default because only the feature is approved so far, not yet
-// WHERE a reader's feedback should actually land — today
-// lib/feedbackService.ts's submitFeedback() only logs to the console
-// and resolves; nothing is sent anywhere. Shipping the sidebar item +
-// dialog while that's still true would let a real reader submit real
-// feedback that quietly goes nowhere, which is exactly the dishonest
-// "silent drop" this flag exists to prevent.
+// feature (2026-09-21) and, 2026-09-23, approved turning it ON, live and
+// FUNCTIONAL. It is now honest: lib/feedbackService.ts's submitFeedback()
+// makes a REAL POST to the backend's /feedback route
+// (server/api/feedback.ts), which records each submission (a one-line log
+// entry + a best-effort local file). No silent drop — a failed send
+// surfaces RateNibras.tsx's honest error state, never a false "thank you".
 //
-// Checked in TWO places, both LAST (after every hook in each
-// component — never before; see each file's own header for why):
-// AppShellSidebar.tsx's own nav-item render (the trigger — moved there
-// from RateNibras.tsx's original floating pill the same day, Amal's
-// decision) and RateNibras.tsx itself (the dialog). With this false,
-// neither renders anything at all — no sidebar row, no dialog, nothing
-// added to the DOM. Flipping it back off after a local test fully
-// reverts the live app to today's exact behaviour.
+// Checked in TWO places, both LAST (after every hook in each component —
+// never before; see each file's own header for why): AppShellSidebar.tsx's
+// own nav-item render (the trigger, in its quiet footer group) and
+// RateNibras.tsx itself (the dialog). With this true, both render; set it
+// back to false to remove the row + dialog from the DOM entirely again.
 //
-// To activate for real: (1) decide where feedback should land and
-// implement the real POST inside lib/feedbackService.ts's
-// submitFeedback() — that file's own header comment has the exact
-// recipe; (2) flip this to `true`. Neither AppShellSidebar.tsx nor
-// RateNibras.tsx need any other changes either way — the dialog
-// already awaits submitFeedback() and already has an honest error
-// state for a rejected promise.
-export const RATE_NIBRAS_ENABLED = false
+// Deploy ordering: feedback needs the backend, so this flag and the
+// frontend's VITE_AI_BACKEND_URL should go live TOGETHER — if the flag is
+// on but no backend URL is baked in, a submit honestly shows the error
+// state (never a fake success) until the backend URL is set.
+export const RATE_NIBRAS_ENABLED = true

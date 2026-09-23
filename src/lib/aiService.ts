@@ -33,7 +33,12 @@ import { getAccessToken, reportInvalidToken } from './accessToken'
 
 export type AiLang = 'en' | 'ar'
 
-function backendUrl(): string | undefined {
+/** The configured backend base URL (no trailing slash), or undefined in a
+ * demo build. Exported so the NON-AI feedback module (lib/feedbackService.ts)
+ * can reuse the exact same switch — the `/feedback` route lives on the same
+ * server as the AI routes — without re-reading/re-normalizing the env itself
+ * or being coupled to any AI concern (no token, no spend cap). */
+export function backendUrl(): string | undefined {
   const url = import.meta.env.VITE_AI_BACKEND_URL as string | undefined
   return url && url.trim() !== '' ? url.replace(/\/$/, '') : undefined
 }

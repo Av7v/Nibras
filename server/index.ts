@@ -81,6 +81,7 @@ import { handleSummarizeRequest } from './api/summarize.ts'
 import { handleExplainRequest } from './api/explain.ts'
 import { handleTranslateRequest } from './api/translate.ts'
 import { handleAskRequest, MAX_QUESTION_CHARS } from './api/ask.ts'
+import { handleFeedbackRequest, MAX_NOTE_CHARS, MAX_PAGE_CHARS, type FeedbackSubmission } from './api/feedback.ts'
 import { isAskPageId, getAskContext, type AskPageId } from './api/_askContext.ts'
 import { normalizeSttMime } from './api/_xaiStt.ts'
 import type { XaiTtsRequest } from './api/_xaiTts.ts'
@@ -138,6 +139,12 @@ const MAX_STT_BODY_BYTES = 3_000_000
 // upper bound for the pre-check (a reading clip is far shorter). At
 // $0.10/hr, 120s ≈ $0.0033 — trivial.
 const MAX_STT_SECONDS = 120
+
+// Feedback ("Rate Nibras") body cap — small: a rating + an optional note
+// (<= MAX_NOTE_CHARS) + lang + a short page path. Generous enough for a
+// 2000-char note in UTF-8 (incl. multibyte Arabic) plus JSON overhead,
+// while still far below the AI routes' cap.
+const MAX_FEEDBACK_BODY_BYTES = 10_000
 
 /** Read a numeric env var, honouring an explicit 0 (so a cap/limit CAN
  * be set to zero as a deliberate kill-switch) and falling back only when
@@ -393,6 +400,34 @@ function validateTranslateRequest(body: unknown): { text: string; from: 'en' | '
   return { text: b.text, from: b.from, to: b.to }
 }
 
+/** `/feedback` request: a 1..5 rating (required), an optional free-text
+ * note (<= MAX_NOTE_CHARS), the UI language, and the page the reader was
+ * on. Non-AI, so no text/token cost concerns — just shape + size limits.
+ * `note`/`page` are optional and default to '' (the client always sends
+ * them, but tolerate their absence). Untrusted free text: it is only ever
+ * recorded (never interpreted/executed) by feedback.ts. */
+function validateFeedbackRequest(body: unknown): FeedbackSubmission {
+  if (typeof body !== 'object' || body === null) throw new HttpError(400, 'Body must be a JSON object')
+  const b = body as Record<string, unknown>
+  if (typeof b.rating !== 'number' || !Number.isInteger(b.rating) || b.rating < 1 || b.rating > 5) {
+    throw new HttpError(400, '"rating" must be an integer from 1 to 5')
+  }
+  let note = ''
+  if (b.note !== undefined && b.note !== null) {
+    if (typeof b.note !== 'string') throw new HttpError(400, '"note" must be a string')
+    if (b.note.length > MAX_NOTE_CHARS) throw new HttpError(413, `"note" exceeds ${MAX_NOTE_CHARS} characters`)
+    note = b.note
+  }
+  if (b.lang !== 'en' && b.lang !== 'ar') throw new HttpError(400, '"lang" must be "en" or "ar"')
+  let page = ''
+  if (b.page !== undefined && b.page !== null) {
+    if (typeof b.page !== 'string') throw new HttpError(400, '"page" must be a string')
+    if (b.page.length > MAX_PAGE_CHARS) throw new HttpError(413, `"page" exceeds ${MAX_PAGE_CHARS} characters`)
+    page = b.page
+  }
+  return { rating: b.rating as 1 | 2 | 3 | 4 | 5, note, lang: b.lang, page }
+}
+
 // --- Single-origin static client (#216) ---
 // In a deploy this same service ALSO serves the built client (dist/) so
 // client + API share ONE origin (no CORS). Override the directory with
@@ -478,6 +513,30 @@ const server = createServer(async (req, res) => {
   const startedAt = Date.now()
   try {
     if (applyCors(req, res)) return
+
+    // Public feedback route ("Rate Nibras"): FREE + non-AI, so it runs
+    // OUTSIDE the AI allowlist below — NO access gate, NO spend cap (it must
+    // work without an AI code). Still guarded: the SAME CORS (applyCors
+    // above), the SAME shared rate limiter, a strict body-size cap, and
+    // JSON-only parsing. Handled here, before the AI-route pipeline, so none
+    // of the AI guards ever apply to it. Thrown HttpErrors (bad body / too
+    // large) fall through to the shared catch below and become 400/413.
+    if (req.url === '/feedback') {
+      if (req.method !== 'POST') {
+        sendJson(res, 405, { error: 'Not found — POST only' })
+        return
+      }
+      const feedbackIp = getClientIp(req, clientIpConfig)
+      if (rateLimiter.isLimited(feedbackIp)) {
+        sendJson(res, 429, { error: 'Too many requests — please slow down' })
+        return
+      }
+      const feedbackBody = await readJsonBody(req, MAX_FEEDBACK_BODY_BYTES)
+      const feedbackReq = validateFeedbackRequest(feedbackBody)
+      await handleFeedbackRequest(feedbackReq)
+      sendJson(res, 200, { ok: true })
+      return
+    }
 
     // API ALLOWLIST FIRST (#148/#216): a path in ROUTES is POST-only and
     // runs the FULL guard pipeline (rate limit -> access gate -> spend cap
@@ -654,7 +713,9 @@ const server = createServer(async (req, res) => {
       const message = err instanceof Error ? err.message : 'Unknown server error'
       console.error(`[${req.url}] provider/internal error: ${message}`)
       const genericMessage =
-        req.url === '/voice'
+        req.url === '/feedback'
+          ? 'Could not submit your feedback. Please try again.'
+          : req.url === '/voice'
           ? 'Voice synthesis is temporarily unavailable. Please try again.'
           : req.url === '/stt'
             ? 'Transcription is temporarily unavailable. Please try again.'
@@ -673,7 +734,7 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, HOST, () => {
   const publicBind = HOST === '0.0.0.0' || HOST === '::' // the all-interfaces binds (network-reachable); a loopback/specific host is not
   console.log(`Nibras AI backend listening on http://${HOST}:${PORT} (${publicBind ? 'PUBLIC bind, reachable from the network' : 'loopback only, not reachable from the network'})`)
-  console.log('Routes: POST /voice, /mindmap, /stt, /summarize, /explain, /translate, /ask. Non-API GETs serve the built client (dist/) when present.')
+  console.log('Routes: POST /voice, /mindmap, /stt, /summarize, /explain, /translate, /ask (AI, gated). POST /feedback (free, non-AI, rate-limited). Non-API GETs serve the built client (dist/) when present.')
   if (!process.env.AI_VOICE_API_KEY) {
     console.log('WARNING: AI_VOICE_API_KEY is not set in this process — every /voice, /mindmap and /stt call will fail. Run with --env-file=server/.env (see server/README.md).')
   }
