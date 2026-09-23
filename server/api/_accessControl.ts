@@ -52,6 +52,18 @@ function sha256(s: string): Buffer {
   return createHash('sha256').update(s, 'utf8').digest()
 }
 
+/** The stable ledger/override id for a token: its SHA-256 as hex — the
+ * EXACT value `identify()` returns for a request carrying that token
+ * (both run through `sha256()` above). Exported so server/index.ts can
+ * pre-compute the id of a NAMED code (e.g. the shared committee/judging
+ * code) to key a spend-cap override on it, and be guaranteed that key
+ * matches the id the spend cap is later handed for the same code — a
+ * single source of truth for "token -> id", never a second, hand-rolled
+ * hashing that could silently drift out of sync with the gate. */
+export function hashToken(token: string): string {
+  return sha256(token).toString('hex')
+}
+
 /** Pull the token out of an `Authorization: Bearer <token>` header. Case-
  * insensitive on the scheme, tolerant of surrounding whitespace. Returns
  * null for anything that isn't a well-formed bearer. */

@@ -7,6 +7,7 @@ import { AppShellSidebar } from './AppShellSidebar'
 import { FocusModeProvider, useFocusModeActive } from './FocusMode'
 import { HeaderSlotProvider } from './HeaderSlot'
 import { NibrasGuideMascot } from './NibrasGuideMascot'
+import { RateNibras } from './RateNibras'
 
 /**
  * Primary app-shell for Dashboard/Reader/Techniques/Profile/Privacy/
@@ -101,6 +102,13 @@ function AppShellContent() {
             NibrasGuideMascot.tsx itself would still render nothing at
             all if some future route were ever added without one. */}
         <NibrasGuideMascot />
+
+        {/* "Rate Nibras" feedback (components/RateNibras.tsx) — mounted
+            once here, same "mount at the shell root" reasoning as
+            AccessGate/NibrasGuideMascot just above. Renders nothing at
+            all today: see config/features.ts's RATE_NIBRAS_ENABLED
+            (default OFF) and RateNibras.tsx's own header for why. */}
+        <RateNibras />
 
         {!focusActive && <AppShellSidebar isOpen={mobileNavOpen} onClose={closeMobileNav} />}
 

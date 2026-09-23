@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { BackgroundSettingsControl } from '../components/BackgroundSettingsControl'
 import { MascotLauncher } from '../components/MascotLauncher'
 import { NibrasGuideMascot } from '../components/NibrasGuideMascot'
+import { RateNibras } from '../components/RateNibras'
 import { BrandMarkIcon, ChevronIcon } from '../components/icons'
 import { focusRing, focusRingInset } from '../lib/focus'
 
@@ -166,6 +167,13 @@ export function Landing() {
           AppShell. */}
       <MascotLauncher variant="floating" />
       <NibrasGuideMascot variant="landing" />
+
+      {/* "Rate Nibras" feedback (components/RateNibras.tsx) — mounted here
+          too, since Landing sits outside AppShell (see this page's own
+          header comment). Renders nothing at all today: see
+          config/features.ts's RATE_NIBRAS_ENABLED (default OFF) and
+          RateNibras.tsx's own header for why. */}
+      <RateNibras />
     </div>
   )
 }

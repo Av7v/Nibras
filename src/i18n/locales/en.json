@@ -635,5 +635,26 @@
       "consentAllow": "Allow and record",
       "consentDeny": "Not now"
     }
+  },
+  "feedback": {
+    "buttonLabel": "Rate Nibras",
+    "modalTitle": "Rate Nibras",
+    "closeAria": "Close",
+    "ratingQuestion": "How was your experience?",
+    "faces": {
+      "bad": "Bad",
+      "poor": "Poor",
+      "okay": "Okay",
+      "good": "Good",
+      "great": "Great"
+    },
+    "noteLabel": "Your suggestion (optional)",
+    "notePlaceholder": "Tell us what you think, or how we can improve",
+    "submit": "Submit",
+    "submitting": "Sending your feedback",
+    "error": "Sorry, we could not send your feedback. Please try again.",
+    "thankYouTitle": "Thank you",
+    "thankYouBody": "Your feedback helps us make Nibras better.",
+    "thankYouClose": "Done"
   }
 }

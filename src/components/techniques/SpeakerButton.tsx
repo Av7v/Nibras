@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useSpeechVoices } from '../../hooks/useSpeechVoices'
 import type { SpeechLang } from '../../lib/textToSpeech'
-import { SpeakerIcon, StopIcon } from '../icons'
+import { SpeakerIcon, SpinnerIcon, StopIcon } from '../icons'
 import { focusRing } from '../../lib/focus'
 
 /** Read-aloud toggle for one technique card. Disables itself (rather
@@ -31,6 +31,10 @@ export function SpeakerButton({
   const available = hasVoiceFor(lang)
 
   const dims = size === 'sm' ? 'size-8' : 'size-10'
+  // While preparing, the button grows to a labeled pill (spinner +
+  // visible "Preparing…" text) — same HEIGHT as the round icon, auto
+  // width — so the state is unmistakable, not a look-alike icon swap.
+  const heightWhenPreparing = size === 'sm' ? 'h-8' : 'h-10'
   const iconSize = size === 'sm' ? 'size-4' : 'size-[18px]'
 
   if (!available) {
@@ -53,14 +57,19 @@ export function SpeakerButton({
       aria-pressed={isActive}
       aria-busy={isPreparing}
       aria-label={isPreparing ? t('techniques.preparing') : isActive ? t('techniques.stopListening') : t('techniques.listen')}
-      className={`relative z-10 inline-flex ${dims} flex-none items-center justify-center rounded-full border-[1.5px] ${
+      className={`relative z-10 inline-flex flex-none items-center justify-center rounded-full border-[1.5px] ${
+        isPreparing ? `${heightWhenPreparing} gap-1.5 px-3` : dims
+      } ${
         isActive || isPreparing
           ? 'border-accent bg-accent text-accent-ink'
           : 'border-line-strong text-ink-muted hover:bg-accent-tint hover:text-accent'
-      } ${isPreparing ? 'cursor-progress opacity-80' : ''} ${focusRing}`}
+      } ${isPreparing ? 'cursor-progress' : ''} ${focusRing}`}
     >
       {isPreparing ? (
-        <SpeakerIcon className={`${iconSize} motion-safe:animate-pulse`} />
+        <>
+          <SpinnerIcon className={`${iconSize} motion-safe:animate-spin`} />
+          <span className="whitespace-nowrap text-[0.75rem] font-semibold">{t('techniques.preparing')}</span>
+        </>
       ) : isActive ? (
         <StopIcon className={iconSize} />
       ) : (

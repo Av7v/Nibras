@@ -84,7 +84,7 @@ import { handleAskRequest, MAX_QUESTION_CHARS } from './api/ask.ts'
 import { isAskPageId, getAskContext, type AskPageId } from './api/_askContext.ts'
 import { normalizeSttMime } from './api/_xaiStt.ts'
 import type { XaiTtsRequest } from './api/_xaiTts.ts'
-import { createAccessControl, parseAccessTokens } from './api/_accessControl.ts'
+import { createAccessControl, hashToken, parseAccessTokens } from './api/_accessControl.ts'
 import { createRateLimiter, getClientIp } from './api/_rateLimiter.ts'
 import { actualChatCostUsd, createSpendCap, estimateChatCostUsd, estimateMindMapCostUsd, estimateSttCostUsd, estimateVoiceCostUsd, type SpendBlockReason } from './api/_spendCap.ts'
 
@@ -103,6 +103,26 @@ const HOST = (process.env.HOST ?? '').trim() || '127.0.0.1' // loopback by defau
 // on any port for this local proof (the Vite client's own dev/preview
 // port differs from this server's, so it's genuinely cross-origin).
 const ALLOWED_ORIGIN = /^https:\/\/(www\.)?nibrasapp\.com$|^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/
+
+// Extra exact-match allowed origins (comma-separated) for the DEPLOYED
+// frontend's own origin: the built SPA (e.g. a Render static site at
+// https://nibras-reading.onrender.com) calls this backend cross-origin,
+// which the nibrasapp.com/localhost regex above does not cover. Set
+// ALLOWED_ORIGINS to the live frontend origin(s) at deploy. Additive and
+// exact-string (never a substring/suffix test, so "evil-nibras...onrender.com"
+// can't sneak in): unset => only the regex applies => byte-identical to
+// before. This is the CORS (browser) control; the access gate below, not
+// CORS, is what actually stops a non-browser caller.
+const ALLOWED_ORIGINS_EXACT = new Set(
+  (process.env.ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter((o) => o.length > 0),
+)
+
+function isAllowedOrigin(origin: string): boolean {
+  return ALLOWED_ORIGIN.test(origin) || ALLOWED_ORIGINS_EXACT.has(origin)
+}
 
 const MAX_BODY_BYTES = 50_000 // covers the text routes' caps below + JSON overhead
 const MAX_TEXT_CHARS = 15_000 // mirrors _xaiTts.ts's own MAX_CHARS — rejected here too, before ever reaching the provider call
@@ -139,7 +159,22 @@ function numEnv(name: string, fallback: number): number {
 // Access gate: comma-separated shared tokens (one per volunteer, so a
 // single one can be revoked without disrupting the rest). UNSET => fail
 // closed: every AI request is refused (503), never silently open.
-const accessControl = createAccessControl(parseAccessTokens(process.env.AI_ACCESS_TOKENS))
+//
+// Committee code (go-live judging, 2026-09-22, Amal-approved): a SINGLE
+// shared code many judges use at once, delivered frictionlessly by a
+// link that auto-applies it (the client seeds it from a URL param — see
+// src/lib/accessToken.ts's applyAccessCodeFromUrl). It is just another
+// access token, so it is MERGED into the same allowlist here (deduped in
+// case it is also listed in AI_ACCESS_TOKENS) and authorizes exactly like
+// a volunteer token — the endpoint therefore stays gated against the open
+// internet/bots (no code, no access). What differs is only its spend
+// headroom, set below. The raw code lives ONLY in AI_COMMITTEE_CODE
+// (never in source, never committed); it is referenced by name and hashed
+// before use. Unset => byte-identical to the volunteer-only pilot.
+const committeeCode = (process.env.AI_COMMITTEE_CODE ?? '').trim()
+const accessTokens = parseAccessTokens(process.env.AI_ACCESS_TOKENS)
+if (committeeCode && !accessTokens.includes(committeeCode)) accessTokens.push(committeeCode)
+const accessControl = createAccessControl(accessTokens)
 
 // Per-volunteer hard spend cap (USD), file-persistent so a restart can't
 // reset anyone's budget. Default $1.50 PER access token (Amal's design),
@@ -165,7 +200,30 @@ const USAGE_FILE = process.env.USAGE_FILE || fileURLToPath(new URL('./.usage/usa
 // is undefined => byte-identical to pre-#537 behaviour.
 const PRODUCTION_TOKEN_CAP_USD = numEnv('PRODUCTION_TOKEN_CAP_USD', 10)
 const productionTokenHash = process.env.AI_PRODUCTION_TOKEN_HASH
-const perTokenCapOverridesUsd = productionTokenHash ? { [productionTokenHash]: PRODUCTION_TOKEN_CAP_USD } : undefined
+
+// Committee code spend headroom (go-live judging, 2026-09-22). Many
+// judges share ONE committee code, which means ONE ledger entry (the
+// ledger keys on the token's hash, so a shared code accrues ALL its
+// users' spend together). At the $1.50 per-VOLUNTEER default that shared
+// entry would trip almost immediately and interrupt judging — exactly
+// what Amal's "don't cap the committee so low they hit a wall" guardrail
+// forbids. So the committee code gets its OWN per-token cap, defaulting to
+// the GLOBAL ceiling: the committee is then bounded only by the single
+// $60 global backstop (for a committee-only deploy both fire together),
+// never by the volunteer default. COMMITTEE_CAP_USD can set a different
+// committee headroom if ever wanted. Keyed by the code's hash via the
+// SAME hashToken() the gate's identify() uses, so this override key is
+// guaranteed to match the id the spend cap is later handed for that code.
+const COMMITTEE_CAP_USD = numEnv('COMMITTEE_CAP_USD', GLOBAL_CAP_USD)
+
+// One map for every per-token override (the production dev/prod token +
+// the committee code). Undefined when neither is set => the spend cap
+// sees no overrides => byte-identical to the plain per-volunteer pilot
+// (every token shares PER_TOKEN_CAP_USD).
+const overrides: Record<string, number> = {}
+if (productionTokenHash) overrides[productionTokenHash] = PRODUCTION_TOKEN_CAP_USD
+if (committeeCode) overrides[hashToken(committeeCode)] = COMMITTEE_CAP_USD
+const perTokenCapOverridesUsd = Object.keys(overrides).length > 0 ? overrides : undefined
 
 const spendCap = createSpendCap({
   perTokenCapUsd: PER_TOKEN_CAP_USD,
@@ -199,7 +257,7 @@ const clientIpConfig = {
  * nothing further. */
 function applyCors(req: IncomingMessage, res: ServerResponse): boolean {
   const origin = req.headers.origin
-  if (origin && ALLOWED_ORIGIN.test(origin)) {
+  if (origin && isAllowedOrigin(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin)
     res.setHeader('Vary', 'Origin')
   }
@@ -620,9 +678,14 @@ server.listen(PORT, HOST, () => {
     console.log('WARNING: AI_VOICE_API_KEY is not set in this process — every /voice, /mindmap and /stt call will fail. Run with --env-file=server/.env (see server/README.md).')
   }
   if (!accessControl.isConfigured()) {
-    console.log('WARNING: AI_ACCESS_TOKENS is not set — the access gate is FAILING CLOSED, so every /voice, /mindmap and /stt request is refused (503). Set AI_ACCESS_TOKENS (comma-separated, one token per volunteer) to allow the pilot clients. See server/README.md.')
+    console.log('WARNING: neither AI_ACCESS_TOKENS nor AI_COMMITTEE_CODE is set — the access gate is FAILING CLOSED, so every AI request is refused (503). Set AI_ACCESS_TOKENS (one token per volunteer) and/or AI_COMMITTEE_CODE (the shared committee/judging code) to allow clients. See server/README.md.')
   }
   console.log(
-    `Spend cap: $${PER_TOKEN_CAP_USD.toFixed(2)} per volunteer token + $${GLOBAL_CAP_USD.toFixed(2)} backend global backstop (estimated, persistent), ledger at ${USAGE_FILE}. Set the xAI account-level billing cap too — it is the exact backstop (see server/README.md).`,
+    `Spend cap: $${PER_TOKEN_CAP_USD.toFixed(2)} per volunteer token + $${GLOBAL_CAP_USD.toFixed(2)} backend GLOBAL backstop (estimated, persistent), ledger at ${USAGE_FILE}. Set the xAI account-level billing cap too — it is the exact backstop (see server/README.md).`,
   )
+  if (committeeCode) {
+    console.log(
+      `Committee code: CONFIGURED (value never logged) — merged into the access allowlist, with its own $${COMMITTEE_CAP_USD.toFixed(2)} per-token cap so many judges sharing it are bounded only by the $${GLOBAL_CAP_USD.toFixed(2)} global backstop, not the $${PER_TOKEN_CAP_USD.toFixed(2)} per-volunteer default.`,
+    )
+  }
 })

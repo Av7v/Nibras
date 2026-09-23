@@ -648,5 +648,26 @@
       "consentAllow": "أوافق وسجّل",
       "consentDeny": "ليس الآن"
     }
+  },
+  "feedback": {
+    "buttonLabel": "قيّم نبراس",
+    "modalTitle": "قيّم نبراس",
+    "closeAria": "إغلاق",
+    "ratingQuestion": "كيف كانت تجربتك؟",
+    "faces": {
+      "bad": "سيّئ",
+      "poor": "ضعيف",
+      "okay": "متوسط",
+      "good": "جيد",
+      "great": "ممتاز"
+    },
+    "noteLabel": "ملاحظاتك أو اقتراحك (اختياري)",
+    "notePlaceholder": "أخبرنا برأيك، أو كيف يمكننا التحسين",
+    "submit": "إرسال",
+    "submitting": "جارٍ إرسال ملاحظاتك",
+    "error": "عذرًا، تعذّر إرسال ملاحظاتك. حاول مرة أخرى من فضلك.",
+    "thankYouTitle": "شكرًا لك",
+    "thankYouBody": "ملاحظاتك تساعدنا على تحسين نبراس.",
+    "thankYouClose": "تم"
   }
 }

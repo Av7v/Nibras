@@ -57,6 +57,55 @@ export function clearAccessToken(): void {
   }
 }
 
+/**
+ * Frictionless committee/judging access (go-live, 2026-09-22, Amal-
+ * approved): a judge opens a LINK that carries the shared committee code,
+ * and this seeds it into the SAME sessionStorage store the gate already
+ * reads — so the judge never sees the "enter your access code" prompt,
+ * while the backend endpoint stays gated against anyone WITHOUT the link
+ * (no code -> the server's access gate 401s). Call ONCE at startup
+ * (main.tsx), before React renders, so the code is in place before the
+ * first AI call and <AccessGate> never opens for a judge.
+ *
+ * Reads the code from EITHER the URL hash (`#access=CODE`, PREFERRED — a
+ * fragment is never sent to the server, so the code stays out of the
+ * frontend host's / any proxy's request logs) OR the query string
+ * (`?access=CODE`, a fallback for link handlers that strip fragments).
+ * After seeding, the `access` parameter is STRIPPED from the address bar
+ * via history.replaceState so the code isn't left visible, bookmarked, or
+ * re-shared showing — defense-in-depth (it's already in the link Amal
+ * sent; this just avoids it lingering). Any OTHER params are preserved.
+ *
+ * The committee code is NOT a strong secret — a public SPA cannot hold one
+ * (see server/api/_accessControl.ts's own note); it is a real speed-bump
+ * paired with the server's rate limiter + the hard $60 global spend cap
+ * that bound the damage. Its value lives ONLY in the link Amal distributes
+ * plus the server's AI_COMMITTEE_CODE env — never in this source or the
+ * built bundle.
+ */
+export function applyAccessCodeFromUrl(): void {
+  if (typeof window === 'undefined') return
+  try {
+    const url = new URL(window.location.href)
+    // Hash first (preferred, kept out of server logs), then query string.
+    const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''))
+    const code = (hashParams.get('access') ?? url.searchParams.get('access') ?? '').trim()
+    if (!code) return
+    setAccessToken(code)
+    // Remove the code from BOTH carriers, preserve everything else, then
+    // rewrite the address bar without the code.
+    hashParams.delete('access')
+    url.searchParams.delete('access')
+    const rebuiltHash = hashParams.toString()
+    url.hash = rebuiltHash ? `#${rebuiltHash}` : ''
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash)
+  } catch {
+    // Malformed URL / storage disabled / no history API — never block app
+    // startup over the convenience link. A judge can still enter the code
+    // via the gate; storage-disabled is already handled by setAccessToken.
+  }
+}
+
 /** `hadToken: true` = a real, previously-entered code was checked and
  * rejected — a genuine "that code isn't valid" moment. `false` = there
  * was never a code entered in the first place (a first-time volunteer,

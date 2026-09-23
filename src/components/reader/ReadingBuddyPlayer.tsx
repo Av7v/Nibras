@@ -24,7 +24,7 @@ import {
   stopNarration,
 } from '../../lib/narrationProgress'
 import { VOICE_RATES } from '../../lib/readingSettings'
-import { DownloadIcon, PauseIcon, PlayIcon, SpeakerIcon } from '../icons'
+import { DownloadIcon, PauseIcon, PlayIcon, SpeakerIcon, SpinnerIcon } from '../icons'
 import { focusRing, focusRingInset } from '../../lib/focus'
 import { ComingSoonAction } from './ComingSoonAction'
 
@@ -329,16 +329,30 @@ export function ReadingBuddyPlayer({ text, lang }: { text: string; lang: SpeechL
         aria-pressed={status === 'playing'}
         aria-busy={status === 'preparing'}
         aria-label={status === 'preparing' ? t('techniques.preparing') : status === 'playing' ? t('readingBuddy.pause') : t('readingBuddy.play')}
-        className={`flex size-9 flex-none items-center justify-center rounded-full bg-accent text-accent-ink transition-colors hover:bg-accent-hover active:bg-accent-active disabled:opacity-70 ${focusRing}`}
+        className={`flex size-9 flex-none items-center justify-center rounded-full bg-accent text-accent-ink transition-colors hover:bg-accent-hover active:bg-accent-active ${status === 'preparing' ? 'cursor-progress' : ''} ${focusRing}`}
       >
         {status === 'preparing' ? (
-          <PlayIcon className="size-4 motion-safe:animate-pulse" />
+          // Distinct broken-ring spinner (not the play triangle it used
+          // to dim) so the state reads as "working", never "nothing
+          // happened" — reduce-motion sees a static broken ring. The
+          // visible label beside it makes it unmistakable (#252 fix).
+          <SpinnerIcon className="size-4 motion-safe:animate-spin" />
         ) : status === 'playing' ? (
           <PauseIcon className="size-4" />
         ) : (
           <PlayIcon className="size-4" />
         )}
       </button>
+
+      {/* Visible "Preparing…" text (not just the button's aria-label) —
+          the whole-clip neural render takes a few seconds; this states it
+          in words right beside the spinner. Only reachable AI-on (status
+          only becomes 'preparing' when isAiBackendConfigured), which is
+          also why it can share the far-end demo-badge slot's row without
+          ever colliding: the demo badge only renders AI-off. */}
+      {status === 'preparing' && (
+        <span className="text-[0.8125rem] font-semibold text-ink">{t('techniques.preparing')}</span>
+      )}
 
       <div
         role="group"

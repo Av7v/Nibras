@@ -863,3 +863,50 @@ export function LanternIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
+
+/** Outline 5-point star — the "Rate Nibras" feedback trigger's icon
+ * (components/RateNibras.tsx). A star has no inherent left/right
+ * reading-flow meaning, so it is not mirrored for RTL (same reasoning
+ * as BookmarkIcon/LanternIcon above). */
+export function StarIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <path
+        d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        fill="none"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+/** A broken loading ring — the "preparing…" state for a neural
+ * read-aloud button while the voice is being generated (a few seconds).
+ * DELIBERATELY a distinct shape at rest, not the play/speaker glyph it
+ * replaces: a faint full ring plus one bold quarter-arc reads as
+ * "working/loading" even with NO animation, so reduce-motion readers
+ * (who never see the spin, and often prefer reduced motion) still get an
+ * unmistakable "this isn't a play button, something is happening" cue —
+ * the exact gap that made the old dimmed-triangle look like "nothing
+ * happened" (nibras-neural-latency diagnosis, 2026-09-21). Callers add
+ * `motion-safe:animate-spin` for the rotation; motion-reduce keeps the
+ * static broken ring. `data-icon="spinner"` is a stable hook the
+ * preparing-indicator regression check queries. A ring has no inherent
+ * left/right reading-flow meaning — not mirrored for RTL. */
+export function SpinnerIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" data-icon="spinner" {...props}>
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="2.2" fill="none" opacity="0.3" />
+      <path
+        d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        fill="none"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}

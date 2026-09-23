@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { EXAMPLE_TEXTS } from '../content/exampleTexts'
+import { EXAMPLE_TEXTS, exampleClipUrl } from '../content/exampleTexts'
 import { useVoicePreference } from '../hooks/useVoicePreference'
 import { useSpeechVoices } from '../hooks/useSpeechVoices'
 import { useReadingCoachSession } from '../hooks/useReadingCoachSession'
 import { isAiBackendConfigured, SpendCapError, synthesizeVoice, VoiceUnavailableError } from '../lib/aiService'
 import { grantArabicSttConsent, hasArabicSttConsent } from '../lib/arabicSttConsent'
 import { speak, stopSpeaking, type SpeechLang } from '../lib/textToSpeech'
-import { MicrophoneIcon, SpeakerIcon, StopIcon, TrashIcon } from '../components/icons'
+import { MicrophoneIcon, SpeakerIcon, SpinnerIcon, StopIcon, TrashIcon } from '../components/icons'
 import { focusRing, focusRingInset } from '../lib/focus'
 import { ArabicSttConsent } from '../components/reader/ArabicSttConsent'
 
@@ -240,6 +240,38 @@ export function ReadingBuddy() {
 
   async function playPassage() {
     setVoiceError(null)
+    // INSTANT path (task #252, the delay Amal noticed): the FIXED example
+    // passage has a pre-baked neural clip per voice × language, so play
+    // it IMMEDIATELY — no /voice round-trip, no few-second "preparing…"
+    // wait. Only AI-on (the clip IS the real eve/rex voice; AI-off keeps
+    // the honest demo browser voice + "Demo voice" badge). A reader's own
+    // PASTED text (customText !== null) has no pre-baked clip and always
+    // takes the on-demand neural synth below (now with the clear spinner
+    // + "Preparing…" indicator). Speed is applied client-side via
+    // playbackRate, exactly like the on-demand path (which requests a
+    // neutral 1× render), so one clip covers every speed.
+    if (customText === null && isAiBackendConfigured()) {
+      if (!audioRef.current) audioRef.current = new Audio()
+      const audio = audioRef.current
+      audio.src = exampleClipUrl(lang, gender)
+      audio.playbackRate = rate
+      try {
+        await audio.play()
+        // Attach reset handlers only AFTER a successful start, so a
+        // failed load (which rejects play()) falls cleanly through to the
+        // on-demand path below without a stale handler racing it.
+        audio.onended = () => setReadAloudStatus('idle')
+        audio.onerror = () => setReadAloudStatus('idle')
+        setReadAloudStatus('playing')
+        return
+      } catch {
+        // Pre-baked clip couldn't start (missing asset / blocked) —
+        // degrade to the on-demand neural synth rather than failing. Not
+        // an expected runtime state: the clips ship in the bundle and the
+        // click carries user activation, but this keeps a bad build honest
+        // (real voice, just slower) instead of a dead button.
+      }
+    }
     // Neural render takes a few seconds — show an honest "preparing…"
     // state (button disabled + busy) instead of a dead-looking button.
     if (isAiBackendConfigured()) setReadAloudStatus('preparing')
@@ -461,7 +493,12 @@ export function ReadingBuddy() {
                   className={`flex items-center gap-1.5 rounded-full border border-line-strong px-3 py-1.5 text-[0.75rem] font-semibold text-ink-muted hover:bg-ink/5 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
                 >
                   {readAloudStatus === 'preparing' ? (
-                    <SpeakerIcon className="size-3.5 motion-safe:animate-pulse" />
+                    // Distinct spinner (not a dimmed speaker) — matches
+                    // SpeakerButton/ReadingBuddyPlayer's preparing state so
+                    // every neural read-aloud surface reads the same way.
+                    // Only pasted text reaches this now; the example is
+                    // instant above.
+                    <SpinnerIcon className="size-3.5 motion-safe:animate-spin" />
                   ) : readAloudStatus === 'playing' ? (
                     <StopIcon className="size-3.5" />
                   ) : (

@@ -18,6 +18,8 @@ import {
 import { focusRing, focusRingInset } from '../lib/focus'
 import { usePageBackgroundPreference } from '../hooks/usePageBackgroundPreference'
 import { MascotLauncher } from './MascotLauncher'
+import { RATE_NIBRAS_ENABLED } from '../config/features'
+import { openRateNibrasModal } from '../lib/rateNibrasModal'
 
 /**
  * The app's primary navigation — a persistent brand-navy (`#002147`,
@@ -74,6 +76,14 @@ import { MascotLauncher } from './MascotLauncher'
  * dialog pattern), and body-scroll-lock — AppShell.tsx's `onClose`
  * callback also returns focus to the menu button that opened it.
  */
+// "Rate Nibras" trigger emoji (Amal's explicit choice, 2026-09-21, via
+// team-lead) — one named, easily-swappable constant rather than an
+// inline literal in the JSX below, so a future design pass can change
+// it in one place without hunting through markup. Decorative only
+// (aria-hidden in the JSX below) — the row's own visible text label
+// carries its accessible name, not this emoji.
+const RATE_NIBRAS_EMOJI = '😊'
+
 export function AppShellSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { t } = useTranslation()
   const { pathname } = useLocation()
@@ -145,6 +155,17 @@ export function AppShellSidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
       document.body.style.overflow = previousOverflow
     }
   }, [isOpen])
+
+  // "Rate Nibras" nav item (below): closes the mobile drawer first —
+  // same reasoning as MascotLauncher's own `onActivate={onClose}` a
+  // little further down (on a narrow phone this drawer sits at z-40,
+  // ABOVE RateNibras.tsx's own dialog at z-30, so without dismissing
+  // the drawer first the dialog would open hidden behind it) — then
+  // opens the dialog through lib/rateNibrasModal's cross-tree store.
+  function handleRateNibrasClick() {
+    onClose()
+    openRateNibrasModal()
+  }
 
   return (
     <>
@@ -332,6 +353,63 @@ export function AppShellSidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
           <HelpIcon className="size-4" />
           {t('guide.sidebarLink')}
         </Link>
+
+        {/* "Rate Nibras" (Amal's decision, 2026-09-21, via team-lead) —
+            moved a second time the same day: OUT of the main nav list
+            (where it briefly sat directly under «مرشد نبراس») and INTO
+            this quiet footer group instead, docked directly below
+            «كيف تستخدم نبراس» / "How to use Nibras". Still the exact
+            same trigger -> lib/rateNibrasModal -> RateNibras.tsx dialog
+            wiring described above this file's main nav list; only
+            WHERE it's docked changed, not what it does or how it opens.
+
+            A `<button>`, not a `<Link>` — still opens a dialog in
+            place, never navigates anywhere. `handleRateNibrasClick`
+            still closes the mobile drawer first (see that function's
+            own comment above) — the drawer is z-40 and RateNibras.tsx's
+            dialog backdrop is z-30, so that ordering still matters
+            wherever the trigger lives.
+
+            Styling switched from the main-nav NavItem look to mirror
+            THIS group's own quiet-link markup instead (the guide/
+            privacy links right above/below — do NOT restyle those,
+            only this relocated item's own classes changed here):
+            text-[0.8125rem]/px-2.5 py-2/gap-2.5/text-accent-ink/72,
+            hover-only background (no permanent resting wash — none of
+            its new siblings have one). The emoji's own wrapper shrank
+            from the old 18px main-nav icon slot to this group's 16px
+            (`size-4`, matching HelpIcon/LockIcon just above/below),
+            with its font-size scaled down to match — same 1:1
+            box-to-glyph ratio the original used, just smaller.
+
+            Gated behind RATE_NIBRAS_ENABLED (default OFF, see
+            config/features.ts) so this row doesn't exist at all — not
+            hidden, not disabled, simply absent — until the feature is
+            ready; RateNibras.tsx's own dialog independently checks the
+            SAME flag, so the two can never drift apart.
+
+            Emoji, not an SVG icon (Amal's explicit choice) — still the
+            RATE_NIBRAS_EMOJI constant above so a future design pass can
+            swap it without touching this JSX; aria-hidden since the
+            visible label text carries this button's accessible name,
+            same decorative-emoji convention RateNibras.tsx's own
+            face-rating radios already use. */}
+        {RATE_NIBRAS_ENABLED && (
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={handleRateNibrasClick}
+            className={`flex items-center gap-2.5 rounded-control px-2.5 py-2 text-[0.8125rem] font-medium text-accent-ink/72 hover:bg-accent-ink/10 hover:text-accent-ink ${focusRing}`}
+          >
+            <span
+              aria-hidden="true"
+              className="flex size-4 flex-none items-center justify-center text-base leading-none"
+            >
+              {RATE_NIBRAS_EMOJI}
+            </span>
+            {t('feedback.buttonLabel')}
+          </button>
+        )}
 
         <Link
           to="/privacy"

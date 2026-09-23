@@ -23,6 +23,30 @@ export interface ExampleText {
   lang: 'en' | 'ar'
 }
 
+import type { VoiceGender } from '../lib/textToSpeech'
+
+/**
+ * Pre-synthesized neural audio for the FIXED example passage above
+ * (task #252) — one static clip per voice × language, so the example
+ * plays INSTANTLY with no /voice round-trip and no "preparing…" wait
+ * (the delay Amal noticed: «الصوت مايشتغل على طول»). Generated ONCE from
+ * this exact same text via the real xAI path, at neutral 1× speed —
+ * playback speed is applied client-side (audio.playbackRate), so a
+ * single clip covers every speed, mirroring how the on-demand path
+ * already renders 1× and speeds up client-side. Mirrors the Letter
+ * Sounds baked-clip pattern (public/letter-sounds/…). The clip IS the
+ * real eve/rex neural voice, so the "AI-on plays ONLY the two neural
+ * voices" rule holds; it is used ONLY when a backend is configured
+ * (AI-on) — AI-off keeps the honest demo browser voice. Only the FIXED
+ * example is pre-baked; a reader's own PASTED text has no clip and keeps
+ * the on-demand neural synth. Voice 1 = male = rex, Voice 2 = female =
+ * eve — the app's locked, never-inverted mapping (see letterSounds.ts).
+ */
+export function exampleClipUrl(lang: 'en' | 'ar', gender: VoiceGender): string {
+  const voiceDir = gender === 'male' ? 'male' : 'female'
+  return `/reading-buddy/example/${voiceDir}/${lang}.mp3`
+}
+
 // Task #231 (2026-08-19, elevated pass same day) — Amal-approved,
 // blessed by both language specialists as TTS/tap-word-clean (plain
 // commas/periods, common words, no em-dashes, homograph-free) for
